@@ -1,0 +1,12 @@
+# Replit / tooling leftovers
+.cache/
+.replit
+.claude/
+
+# Old snapshots (kept locally; git history replaces these)
+archive/
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store

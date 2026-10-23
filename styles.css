@@ -1,0 +1,83 @@
+/* Shared styles for Jacob Wadkins Personal Website */
+
+/* Text utilities */
+.justify-full {
+    text-align: justify;
+    text-justify: inter-word;
+}
+
+/* Mobile positioning utility */
+@media (max-width: 768px) {
+    .mobile-center {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+/* Navigation styles for mobile */
+@media (max-width: 640px) {
+    .nav-menu {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .nav-item {
+        background-color: white;
+        color: #1a365d;
+        border-radius: 9999px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        margin: 0 0.25rem;
+    }
+
+    .nav-item.active {
+        background-color: #e53e3e;
+        color: white;
+    }
+
+    .title-container {
+        text-align: center;
+        width: 100%;
+    }
+}
+
+/* Quote styling (for Quotes page) */
+.quote-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quote-text {
+    font-size: 1.5rem;
+    font-style: italic;
+    margin-bottom: 1rem;
+}
+
+.quote-author {
+    font-size: 1.25rem;
+    text-align: right;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #1a365d;
+    color: white;
+    padding: 8px;
+    z-index: 100;
+    transition: top 0.3s;
+}
+
+.skip-link:focus {
+    top: 0;
+}
