@@ -47,14 +47,190 @@
         </a>
     </div>
     <!-- About Me Box -->
-    <div class="w-full md:w-2/5 rounded px-4 md:px-8 pt-4 md:pt-6 pb-4 mt-4 md:mt-0 md:absolute md:top-20 md:left-12 bg-white bg-opacity-80 backdrop-filter backdrop-blur-sm">
+    <div class="w-full xl:w-2/5 rounded px-4 md:px-8 pt-4 md:pt-6 pb-4 mt-4 xl:mt-0 xl:absolute xl:top-20 xl:left-12 bg-white bg-opacity-80 backdrop-filter backdrop-blur-sm">
         <h2 class="text-gray-700 text-xl md:text-2xl font-bold mb-2 md:mb-4">About Me</h2>
         <p class="text-gray-700 text-sm md:text-base justify-full">   
             I am an environmental engineer with over a decade of experience, and I specialize in the design of wastewater treatment systems for industrial clients. I've had the privilege of contributing to the compliance and sustainability of numerous municipal and industrial clients via wastewater treatment systems design, a field that demands a seamless integration of multiple engineering disciplines. <br><br>
             <span class="font-bold">Developing comprehensive systems that effectively manage and treat wastewater and thereby transform challenges into opportunities for business sustainability and excellence is what excites me most.</span> The joy I find in my work comes from the collaborative process of designing and implementing these systems, ensuring they meet the specific needs of each client. My commitment to this field is driven by a deep-seated belief in responsible stewardship of our natural resources, and I continuously seek to apply innovative technologies and methods to further this cause while never losing sight of clients' business needs.
         </p>
     </div>
-    
+
+    <!-- Treatment Train Diagram (interactivity in treatment-train.js) -->
+    <section id="treatment-train" class="w-11/12 container mx-auto mt-8 mb-12">
+        <div class="bg-white shadow-md rounded px-4 sm:px-8 pt-6 pb-8">
+            <p class="tt-kicker">How it works</p>
+            <h2 class="text-gray-700 text-2xl font-bold mb-2">From wastewater to reuse water</h2>
+            <p class="text-gray-700 mb-6 max-w-3xl">
+                This is what one of the systems I design looks like, from the dirty water leaving a food plant to purified water going back into it. Click any stage to see what it does and the projects where I designed it.
+            </p>
+
+            <div class="tt-diagram">
+                <div class="tt-scroll">
+                    <svg viewBox="0 86 1256 244" role="img" aria-labelledby="tt-title tt-desc">
+                        <title id="tt-title">Wastewater treatment train</title>
+                        <desc id="tt-desc">Water flows left to right through equalization, screening, flotation, biological treatment, membrane filtration, and advanced purification into reuse storage, changing from brown to clear blue along the way.</desc>
+                        <defs>
+                            <linearGradient id="tt-pipe-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1240" y2="0">
+                                <stop offset="0" stop-color="#7c5a35"/>
+                                <stop offset="0.35" stop-color="#857350"/>
+                                <stop offset="0.55" stop-color="#6e7c55"/>
+                                <stop offset="0.7" stop-color="#4ba3c4"/>
+                                <stop offset="1" stop-color="#3b9ede"/>
+                            </linearGradient>
+                            <clipPath id="tt-clip-eq"><rect x="-58" y="130" width="116" height="130"/></clipPath>
+                            <clipPath id="tt-clip-daf"><rect x="-58" y="140" width="116" height="120"/></clipPath>
+                            <clipPath id="tt-clip-tank"><rect x="-48" y="122" width="96" height="138"/></clipPath>
+                            <filter id="tt-glow" x="-50%" y="-200%" width="200%" height="500%">
+                                <feGaussianBlur stdDeviation="3" result="blur"/>
+                                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+
+                        <g transform="translate(16 0)">
+                        <!-- Main pipe; breaks at the MBR, where permeate is drawn off the top instead -->
+                        <line x1="20" y1="262" x2="1220" y2="262" stroke="#cbd5e1" stroke-width="2"/>
+                        <path class="tt-pipe" d="M0 236 H806 M882 236 H1224"/>
+                        <path class="tt-flow" d="M0 236 H806 M882 236 H1224"/>
+                        <path d="M1222 226 L1238 236 L1222 246 Z" fill="#3b9ede"/>
+
+                        <!-- 1: Equalization tank + pump -->
+                        <g class="tt-unit" data-stage="0" transform="translate(120 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-58" y="132" width="116" height="128" fill="#f8fafc"/>
+                            <g clip-path="url(#tt-clip-eq)">
+                                <path class="tt-wave" d="M-116 162 q14 -6 28 0 t28 0 t28 0 t28 0 t28 0 t28 0 t28 0 t28 0 V262 H-116 Z" fill="#7c5a35"/>
+                            </g>
+                            <path class="tt-wall" d="M-60 130 V262 H60 V130"/>
+                            <g transform="translate(86 236)">
+                                <circle r="13" fill="#f8fafc" stroke="#334155" stroke-width="2.5"/>
+                                <path class="tt-spin" d="M0 -8 L7 4 L-7 4 Z" fill="#334155"/>
+                            </g>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">1</tspan> Equalization</text>
+                            <text class="tt-sub" x="0" y="314">Pump station · EQ tank</text>
+                        </g>
+
+                        <!-- 2: Rotary drum screen -->
+                        <g class="tt-unit" data-stage="1" transform="translate(290 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-55" y="176" width="110" height="86" rx="4" fill="#e2e8f0" stroke="#334155" stroke-width="2.5"/>
+                            <rect x="-51" y="214" width="102" height="46" fill="#7f6441"/>
+                            <g class="tt-spin tt-spin-slow">
+                                <circle cx="0" cy="186" r="40" fill="#f1f5f9" stroke="#334155" stroke-width="3"/>
+                                <circle cx="0" cy="186" r="33" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="3 4"/>
+                                <path d="M0 153 V219 M-33 186 H33 M-23 163 L23 209 M23 163 L-23 209" stroke="#94a3b8" stroke-width="2"/>
+                                <circle cx="0" cy="186" r="5" fill="#334155"/>
+                            </g>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">2</tspan> Screening</text>
+                            <text class="tt-sub" x="0" y="314">Rotary drum screen</text>
+                        </g>
+
+                        <!-- 3: Dissolved/suspended air flotation -->
+                        <g class="tt-unit" data-stage="2" transform="translate(460 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-58" y="142" width="116" height="118" fill="#f8fafc"/>
+                            <rect x="-58" y="160" width="116" height="100" fill="#857350"/>
+                            <g class="tt-bubbles" data-n="16" data-x="-50 50" data-y="254 172" data-r="1.5 3"></g>
+                            <rect x="-58" y="160" width="116" height="9" fill="#a16207" opacity="0.85"/>
+                            <g clip-path="url(#tt-clip-daf)">
+                                <line x1="-58" y1="151" x2="58" y2="151" stroke="#64748b" stroke-width="2"/>
+                                <g class="tt-skim">
+                                    <rect x="-94" y="151" width="3" height="12" fill="#334155"/>
+                                    <rect x="-54" y="151" width="3" height="12" fill="#334155"/>
+                                    <rect x="-14" y="151" width="3" height="12" fill="#334155"/>
+                                    <rect x="26" y="151" width="3" height="12" fill="#334155"/>
+                                </g>
+                            </g>
+                            <path class="tt-wall" d="M-60 140 V262 H60 V140"/>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">3</tspan> Flotation</text>
+                            <text class="tt-sub" x="0" y="314">DAF / SAF</text>
+                        </g>
+
+                        <!-- 4: Aeration basin -->
+                        <g class="tt-unit" data-stage="3" transform="translate(632 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-63" y="132" width="126" height="128" fill="#f8fafc"/>
+                            <rect x="-63" y="150" width="126" height="110" fill="#6e7c55"/>
+                            <rect x="-53" y="250" width="16" height="4" fill="#334155"/>
+                            <rect x="-23" y="250" width="16" height="4" fill="#334155"/>
+                            <rect x="7" y="250" width="16" height="4" fill="#334155"/>
+                            <rect x="37" y="250" width="16" height="4" fill="#334155"/>
+                            <g class="tt-bubbles" data-n="26" data-x="-52 52" data-y="248 156" data-r="2 4"></g>
+                            <path d="M66 112 H-44 V248" fill="none" stroke="#64748b" stroke-width="3"/>
+                            <text class="tt-tiny" x="66" y="106" fill="#64748b" text-anchor="end">Air</text>
+                            <path class="tt-wall" d="M-65 130 V262 H65 V130"/>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">4</tspan> Biological</text>
+                            <text class="tt-sub" x="0" y="314">Aeration basins</text>
+                        </g>
+
+                        <!-- 5: Membrane bioreactor -->
+                        <g class="tt-unit" data-stage="4" transform="translate(806 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-58" y="137" width="116" height="123" fill="#f8fafc"/>
+                            <rect x="-58" y="156" width="116" height="104" fill="#64867a"/>
+                            <g class="tt-bubbles" data-n="12" data-x="-46 46" data-y="252 180" data-r="1.5 3"></g>
+                            <g fill="#f8fafc" fill-opacity="0.9" stroke="#475569" stroke-width="2">
+                                <rect x="-44" y="172" width="20" height="70"/>
+                                <rect x="-10" y="172" width="20" height="70"/>
+                                <rect x="24" y="172" width="20" height="70"/>
+                            </g>
+                            <path d="M-39 176 V238 M-34 176 V238 M-29 176 V238 M-5 176 V238 M0 176 V238 M5 176 V238 M29 176 V238 M34 176 V238 M39 176 V238" stroke="#94a3b8" stroke-width="1.5"/>
+                            <path class="tt-permeate" d="M-34 172 V118 M0 172 V118 M34 172 V118 M-34 118 H76 V236"/>
+                            <path class="tt-flow tt-flow-thin" d="M-34 118 H76 V236"/>
+                            <path class="tt-wall" d="M-60 135 V262 H60 V135"/>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">5</tspan> Membranes</text>
+                            <text class="tt-sub" x="0" y="314">Membrane bioreactor</text>
+                        </g>
+
+                        <!-- 6: RO skid + UV/AOP reactor -->
+                        <g class="tt-unit" data-stage="5" transform="translate(980 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <path d="M-58 132 V262 M58 132 V262 M-58 132 H58 M-58 204 H58" fill="none" stroke="#94a3b8" stroke-width="3"/>
+                            <g fill="#e2e8f0" stroke="#334155" stroke-width="2">
+                                <rect x="-52" y="140" width="104" height="16" rx="8"/>
+                                <rect x="-52" y="162" width="104" height="16" rx="8"/>
+                                <rect x="-52" y="184" width="104" height="16" rx="8"/>
+                            </g>
+                            <text class="tt-tiny" x="0" y="174" fill="#334155" text-anchor="middle">RO</text>
+                            <rect x="-48" y="224" width="96" height="24" rx="12" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+                            <line class="tt-uv" x1="-34" y1="236" x2="34" y2="236" stroke="#a78bfa" stroke-width="5" stroke-linecap="round" filter="url(#tt-glow)"/>
+                            <text class="tt-tiny" x="0" y="218" fill="#6d28d9" text-anchor="middle">UV / AOP</text>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">6</tspan> Purification</text>
+                            <text class="tt-sub" x="0" y="314">RO · UV/AOP · carbon</text>
+                        </g>
+
+                        <!-- 7: Reuse storage tank -->
+                        <g class="tt-unit" data-stage="6" transform="translate(1140 0)">
+                            <rect class="tt-hl" x="-80" y="92" width="160" height="236" rx="14"/>
+                            <rect x="-50" y="120" width="100" height="142" fill="#f8fafc"/>
+                            <g clip-path="url(#tt-clip-tank)">
+                                <rect class="tt-level" x="-50" y="150" width="100" height="130" fill="#3b9ede"/>
+                            </g>
+                            <path d="M-48 165 H48 M-48 205 H48 M-48 245 H48" stroke="#ffffff" stroke-opacity="0.45" stroke-width="2"/>
+                            <path class="tt-wall" d="M-50 120 V262 H50 V120"/>
+                            <ellipse cx="0" cy="120" rx="50" ry="9" fill="#e2e8f0" stroke="#334155" stroke-width="2.5"/>
+                            <text class="tt-tiny" x="52" y="104" fill="#64748b" text-anchor="end">×3</text>
+                            <text class="tt-name" x="0" y="294"><tspan class="tt-num">7</tspan> Reuse</text>
+                            <text class="tt-sub" x="0" y="314">Storage tanks</text>
+                        </g>
+                        </g>
+
+                        <!-- Drawn last so the stage highlights don't cover them -->
+                        <text class="tt-tiny" x="4" y="222" fill="#7c5a35">Influent</text>
+                        <text class="tt-tiny" x="1252" y="222" fill="#2563eb" text-anchor="end">Reuse</text>
+                    </svg>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 md:hidden">Swipe the diagram to see every stage →</p>
+            </div>
+
+            <div class="tt-tabs" role="tablist" aria-label="Treatment stages"></div>
+            <div id="tt-panel" class="tt-panel" role="tabpanel"></div>
+
+            <p class="text-sm text-gray-500 mt-6 pt-4 border-t border-gray-200">
+                Not every plant needs every stage. A facility discharging to a city sewer might stop after flotation; one recycling its water goes all the way to reuse.
+            </p>
+        </div>
+    </section>
+
 </main>
 
 
@@ -66,5 +242,6 @@
     <p class="text-white text-sm md:text-base">&copy; 2026 Jacob Wadkins. All rights reserved.</p>
 </footer>
 
+<script src="treatment-train.js"></script>
 </body>
 </html>

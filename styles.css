@@ -73,3 +73,281 @@
 .skip-link:focus {
     top: 0;
 }
+
+/* Treatment train diagram (Professional page) */
+.tt-kicker {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #2563eb;
+}
+
+.tt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tt-scroll svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+@media (max-width: 767px) {
+    .tt-scroll svg {
+        min-width: 900px;
+    }
+}
+
+.tt-pipe {
+    fill: none;
+    stroke: url(#tt-pipe-grad);
+    stroke-width: 12;
+}
+
+.tt-permeate {
+    fill: none;
+    stroke: #4ba3c4;
+    stroke-width: 6;
+    stroke-linejoin: round;
+}
+
+.tt-flow {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 3;
+    stroke-dasharray: 8 16;
+    animation: tt-flow 0.9s linear infinite;
+}
+
+.tt-flow-thin {
+    stroke-width: 2;
+}
+
+.tt-wall {
+    fill: none;
+    stroke: #334155;
+    stroke-width: 3;
+    stroke-linejoin: round;
+}
+
+.tt-tiny {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.tt-name {
+    font-size: 15px;
+    font-weight: 700;
+    fill: #334155;
+    text-anchor: middle;
+    transition: fill 0.3s;
+}
+
+.tt-num {
+    fill: #2563eb;
+}
+
+.tt-sub {
+    font-size: 12px;
+    fill: #64748b;
+    text-anchor: middle;
+}
+
+.tt-unit {
+    cursor: pointer;
+}
+
+.tt-hl {
+    fill: #eff6ff;
+    stroke: #93c5fd;
+    stroke-width: 2;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tt-unit:hover .tt-hl {
+    opacity: 0.5;
+}
+
+.tt-unit.is-active .tt-hl {
+    opacity: 1;
+}
+
+.tt-unit.is-active .tt-name {
+    fill: #1d4ed8;
+}
+
+.tt-bubble {
+    fill: rgba(255, 255, 255, 0.75);
+    animation: tt-rise 3s linear infinite;
+}
+
+.tt-wave {
+    animation: tt-wave 3s linear infinite;
+}
+
+.tt-spin {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: tt-spin 1.2s linear infinite;
+}
+
+.tt-spin-slow {
+    animation-duration: 8s;
+}
+
+.tt-skim {
+    animation: tt-skim 4s linear infinite;
+}
+
+.tt-uv {
+    animation: tt-pulse 1.6s ease-in-out infinite alternate;
+}
+
+.tt-level {
+    animation: tt-level 6s ease-in-out infinite alternate;
+}
+
+@keyframes tt-flow {
+    from { stroke-dashoffset: 24; }
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes tt-rise {
+    0% { transform: translateY(0); opacity: 0; }
+    15% { opacity: 0.9; }
+    85% { opacity: 0.9; }
+    100% { transform: translateY(calc(-1 * var(--rise))); opacity: 0; }
+}
+
+@keyframes tt-wave {
+    from { transform: translateX(0); }
+    to { transform: translateX(56px); }
+}
+
+@keyframes tt-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes tt-skim {
+    from { transform: translateX(0); }
+    to { transform: translateX(40px); }
+}
+
+@keyframes tt-pulse {
+    from { opacity: 0.55; }
+    to { opacity: 1; }
+}
+
+@keyframes tt-level {
+    from { transform: translateY(16px); }
+    to { transform: translateY(0); }
+}
+
+/* Stage tabs; the active tab's bar fills while the auto-tour runs (5s, matches TOUR_MS) */
+.tt-tabs {
+    position: relative;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-bottom: 0.25rem;
+    overflow-x: auto;
+}
+
+.tt-tab {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.9rem 0.35rem 0.4rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    background: white;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.tt-tab:hover {
+    border-color: #1e3a8a;
+}
+
+.tt-tab-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.tt-tab[aria-selected="true"] {
+    background: #1e3a8a;
+    border-color: #1e3a8a;
+    color: white;
+}
+
+.tt-tab[aria-selected="true"] .tt-tab-num {
+    background: white;
+}
+
+.tt-touring .tt-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: #ef4444;
+    transform-origin: left;
+    animation: tt-progress 5s linear;
+}
+
+@keyframes tt-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+.tt-panel {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .tt-panel {
+        grid-template-columns: 3fr 2fr;
+    }
+}
+
+.tt-panel.tt-fade {
+    animation: tt-fade 0.4s ease-out;
+}
+
+@keyframes tt-fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+.tt-project {
+    padding: 0.75rem 1rem;
+    border-left: 4px solid #3b9ede;
+    border-radius: 0.25rem;
+    background: #f1f5f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tt-flow, .tt-bubble, .tt-wave, .tt-spin, .tt-skim, .tt-uv, .tt-level, .tt-panel.tt-fade {
+        animation: none;
+    }
+}
