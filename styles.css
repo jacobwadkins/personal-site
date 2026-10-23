@@ -6,14 +6,6 @@
     text-justify: inter-word;
 }
 
-/* Mobile positioning utility */
-@media (max-width: 768px) {
-    .mobile-center {
-        left: 50%;
-        transform: translateX(-50%);
-    }
-}
-
 /* Navigation styles for mobile */
 @media (max-width: 640px) {
     .nav-menu {
