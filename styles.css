@@ -6,34 +6,101 @@
     text-justify: inter-word;
 }
 
-/* Navigation styles for mobile */
-@media (max-width: 640px) {
-    .nav-menu {
+/* Site header: the name on the left and the main pages on the right, on one line (60px tall, 80px
+   from md up). Phones don't have room for the links beside the name, so they get a Menu button that
+   opens them in a panel under the header (site-nav.js) */
+.site-nav {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    padding: 1rem;
+    background: #1e3a8a;
+    color: white;
+}
+
+.site-name {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+}
+
+.site-links {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    white-space: nowrap;
+}
+
+.site-name,
+.site-links a {
+    transition: color 0.3s;
+}
+
+.site-name:hover,
+.site-links a:hover,
+.site-links a:focus-visible,
+.site-links a[aria-current] {
+    color: #ef4444;
+}
+
+.site-menu-button {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.1875rem 0.7rem;
+    line-height: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
+@media (max-width: 539px) {
+    .has-menu .site-menu-button {
         display: flex;
-        justify-content: space-between;
-        padding: 0.5rem;
-        overflow-x: auto;
-        white-space: nowrap;
     }
 
-    .nav-item {
-        background-color: white;
-        color: #1a365d;
-        border-radius: 9999px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-        white-space: nowrap;
-        margin: 0 0.25rem;
+    .has-menu .site-links {
+        display: none;
     }
 
-    .nav-item.active {
-        background-color: #e53e3e;
-        color: white;
+    .has-menu.is-open .site-links {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding-bottom: 0.5rem;
+        background: #1e3a8a;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
     }
 
-    .title-container {
-        text-align: center;
-        width: 100%;
+    .has-menu .site-links a {
+        padding: 0.8rem 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        font-size: 1.05rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .site-nav {
+        padding: 1.5rem 5rem;
+    }
+
+    .site-name {
+        font-size: 1.5rem;
+        line-height: 2rem;
+    }
+
+    .site-links {
+        gap: 2rem;
     }
 }
 
