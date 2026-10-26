@@ -203,6 +203,15 @@
 
     const root = document.getElementById("canoe-river");
     if (!root) return;
+
+    // The river fills the screen below the header, which gets taller where its links wrap
+    const header = document.querySelector("header");
+    if (header && "ResizeObserver" in window) {
+        new ResizeObserver(function () {
+            root.style.setProperty("--cr-header", header.offsetHeight + "px");
+        }).observe(header);
+    }
+
     const stage = root.querySelector(".cr-stage");
     const canvas = stage.querySelector("canvas");
     const statusEl = stage.querySelector(".cr-status");

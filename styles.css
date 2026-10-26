@@ -37,6 +37,52 @@
     }
 }
 
+/* Under the header on the Personal and Professional subpages: the section's main page, then the
+   pages in it */
+.section-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1.25rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4b5563;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+@media (min-width: 768px) {
+    .section-nav {
+        padding: 0.75rem 5rem; /* lines up with the name in the header */
+    }
+}
+
+.section-nav a {
+    transition: color 0.3s;
+}
+
+.section-nav a:hover,
+.section-nav a:focus-visible {
+    color: #ef4444;
+}
+
+.section-nav a[aria-current="page"] {
+    color: #ef4444;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.35rem;
+}
+
+.section-nav-home {
+    color: #1e3a8a;
+}
+
+.section-nav-sep {
+    margin: 0 -0.5rem;
+    color: #9ca3af;
+}
+
 /* Quote styling (for Quotes page) */
 .quote-container {
     max-width: 1200px;
