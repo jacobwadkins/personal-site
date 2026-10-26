@@ -375,6 +375,52 @@
     }
 }
 
+/* on the Personal page the river fills the screen below the header (60px tall, 80px from md up) */
+.cr-page {
+    --cr-header: 60px;
+    padding: 0.5rem 0.5rem 0;
+}
+
+.cr-page .cr-stage {
+    aspect-ratio: auto;
+    height: calc(100vh - var(--cr-header) - 1rem);
+    min-height: 26rem;
+    max-height: none;
+}
+
+@supports (height: 100svh) {
+    .cr-page .cr-stage {
+        height: calc(100svh - var(--cr-header) - 1rem);
+    }
+}
+
+@media (min-width: 768px) {
+    .cr-page {
+        --cr-header: 80px;
+    }
+}
+
+.cr-below {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.4rem 1.5rem;
+    padding: 0.6rem 0.25rem 1rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.cr-links a {
+    font-weight: 600;
+    color: #1e3a8a;
+    transition: color 0.3s;
+}
+
+.cr-links a:hover,
+.cr-links a:focus-visible {
+    color: #ef4444;
+}
+
 .cr-stage:focus {
     outline: none;
 }
@@ -572,16 +618,11 @@
     background: #f8fafc;
 }
 
+/* the About Me introduction over the river, gone once you start paddling */
 .cr-overlay {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    text-align: center;
-    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.12) 75%);
-    cursor: pointer;
+    pointer-events: none;
     transition: opacity 0.5s, visibility 0.5s;
 }
 
@@ -590,28 +631,111 @@
     visibility: hidden;
 }
 
-.cr-overlay-title {
-    font-size: 1.6rem;
+/* the landing card and touch controls wait until then too */
+.cr-stage:not(.is-playing) .cr-card,
+.cr-stage:not(.is-playing) .cr-touch {
+    visibility: hidden;
+}
+
+.cr-intro {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    width: min(32rem, calc(100% - 2rem));
+    max-height: calc(100% - 5rem); /* clear of the landing buttons */
+    border-radius: 0.5rem;
+    color: #374151;
+    background: rgba(255, 255, 255, 0.88);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.cr-intro-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem 0.9rem;
+    font-size: 0.95rem;
+}
+
+.cr-intro-scroll p + p {
+    margin-top: 0.75rem;
+}
+
+.cr-intro-head {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 0.75rem;
+}
+
+.cr-intro-photo {
+    width: 4rem;
+    height: 4rem;
+    flex: none;
+    object-fit: cover;
+    border: 2px solid white;
+    border-radius: 9999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cr-intro-title {
+    font-size: 1.5rem;
     font-weight: 700;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.cr-intro-foot {
+    flex: none;
+    padding: 0.8rem 1.5rem 1.1rem;
+    border-top: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+.cr-intro-cta {
+    font-size: 0.9rem;
+}
+
+@media (max-width: 639px) {
+    .cr-intro {
+        left: 0.5rem;
+        bottom: 0.5rem;
+        width: calc(100% - 1rem);
+        max-height: min(60%, calc(100% - 6.5rem)); /* leave the river showing, and the two rows of landing buttons */
+    }
+
+    .cr-intro-scroll {
+        padding: 1rem 1rem 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .cr-intro-foot {
+        padding: 0.7rem 1rem 0.9rem;
+    }
+
+    .cr-intro-photo {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .cr-intro-title {
+        font-size: 1.3rem;
+    }
 }
 
 .cr-status {
-    margin-top: 0.6rem;
+    margin-top: 0.75rem;
     font-size: 0.9rem;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-}
-
-.cr-status.is-error {
-    max-width: 26rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
-    background: rgba(15, 23, 42, 0.75);
-    cursor: auto;
+    color: #475569;
 }
 
 .cr-fail-links a {
     font-weight: 700;
+    color: #1e3a8a;
     text-decoration: underline;
 }
 
@@ -621,8 +745,8 @@
     height: 0.9rem;
     margin-right: 0.5rem;
     vertical-align: -0.1rem;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: white;
+    border: 2px solid rgba(30, 58, 138, 0.25);
+    border-top-color: #1e3a8a;
     border-radius: 9999px;
     animation: tt-spin 0.9s linear infinite;
 }
@@ -632,21 +756,42 @@
 }
 
 .cr-start {
-    margin-top: 0.9rem;
-    padding: 0.6rem 1.6rem;
+    margin-top: 0.75rem;
+    padding: 0.55rem 1.5rem;
     border-radius: 0.25rem;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    color: #1e3a8a;
-    background: white;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-    transition: background-color 0.3s, color 0.3s;
+    color: white;
+    background: #1e3a8a;
+    transition: background-color 0.3s;
 }
 
 .cr-start:hover,
 .cr-start:focus-visible {
-    color: white;
     background: #ef4444;
+}
+
+/* coming back from a landing's page skips the introduction */
+.cr-resume-note {
+    display: none;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+.cr-resume-note .cr-spinner {
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+}
+
+.cr-stage.is-resuming .cr-intro {
+    display: none;
+}
+
+.cr-stage.is-resuming .cr-resume-note {
+    display: flex;
 }
 
 .cr-fs {
@@ -757,12 +902,43 @@
     }
 }
 
+/* on the landing pages (river-return.js): back to the canoe on the Personal page */
+.cr-return {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.2rem 0.65rem 1rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    color: white;
+    background: #1e3a8a;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35);
+    transition: background-color 0.3s;
+    animation: cr-return-in 0.5s ease-out 0.3s both;
+}
+
+.cr-return:hover,
+.cr-return:focus-visible {
+    background: #ef4444;
+}
+
+@keyframes cr-return-in {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .cr-card, .cr-overlay, .cr-toast, .cr-fade {
+    .cr-card, .cr-overlay, .cr-toast, .cr-fade, .cr-return {
         transition: none;
     }
 
-    .cr-spinner {
+    .cr-spinner, .cr-return {
         animation: none;
     }
 }

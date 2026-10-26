@@ -10,19 +10,19 @@
     // side is the bank it's on (-1 river left, 1 river right).
     const STOPS = [
         {
-            name: "Interests", href: "Interests.html", place: "Riverside campsite", z: -150, side: -1, build: "camp",
+            name: "Interests", href: "Interests.html", place: "Riverside campsite", z: -70, side: -1, build: "camp",
             blurb: "Pull up at the campsite to see what I get up to when I'm off the clock."
         },
         {
-            name: "Travels", href: "Travels.html", place: "Trailhead shelter", z: -330, side: 1, build: "trail",
+            name: "Travels", href: "Travels.html", place: "Trailhead shelter", z: -170, side: 1, build: "trail",
             blurb: "Every trip starts at a trailhead. Here's where mine have gone."
         },
         {
-            name: "Quotes", href: "Quotes.html", place: "Old grist mill", z: -510, side: -1, build: "mill"
+            name: "Quotes", href: "Quotes.html", place: "Old grist mill", z: -270, side: -1, build: "mill"
             // shows one of QUOTES instead of a blurb
         },
         {
-            name: "Contact", href: "Contact.html", place: "Cabin landing", z: -690, side: 1, build: "cabin",
+            name: "Contact", href: "Contact.html", place: "Cabin landing", z: -370, side: 1, build: "cabin",
             blurb: "The porch light's on. Stop in and say hello."
         }
     ];
@@ -37,13 +37,16 @@
         ["Rarely have I seen a situation where doing less than the other guy is a good strategy.", "Jimmy Spithill"]
     ];
 
-    const RIVER = { start: 30, end: -830, zMax: 320, zMin: -1160 };
-    const RIFFLES = [-60, -240, -420, -600, -770]; // shallow, fast stretches between the landings
+    const RIVER = { start: 30, end: -470, zMax: 320, zMin: -800 };
+    const RIFFLES = [-20, -120, -220, -320, -420]; // shallow, fast stretches between the landings
+    const CURRENT = 1.65;    // m/s down the middle of the river, faster through the riffles
     const PAD_HEIGHT = 1.0;  // ground level of each landing's clearing
     const DOCK_Y = 0.7;      // dock deck height above the water
     const CANOE_LEN = 4.9;
     const PADDLER_Z = 1.47;  // the stern seat, in the canoe's frame (bow toward -z)
     const STOP_RANGE = 24;   // how close to a dock before its card appears
+    const IDLE_DELAY = 5;    // seconds without paddling before the canoe drifts back to the middle
+    const TRIP_KEY = "canoeRiver"; // sessionStorage: the landing you went ashore at, to pick the trip back up
 
     // Fall foliage, shared by the instanced trees and the canopy shading on the far hillsides
     const LEAVES = {
@@ -189,7 +192,7 @@
                 + fbm(x * 0.021 + 5.2, z * 0.021, 3) * 7 * smoothstep(0, 40, w);
         }
         // the valley closes off past both ends of the run, as if the river bends out of sight
-        h += (75 + 25 * noise(x * 0.01, 3.7)) * (smoothstep(-950, -1130, z) + smoothstep(170, 310, z));
+        h += (75 + 25 * noise(x * 0.01, 3.7)) * (smoothstep(RIVER.end - 120, RIVER.end - 300, z) + smoothstep(170, 310, z));
         const pw = padWeight(x, z);
         if (pw > 0) h = lerp(h, PAD_HEIGHT, pw * smoothstep(-1, 1.5, u));
         return h;
@@ -201,7 +204,6 @@
     if (!root) return;
     const stage = root.querySelector(".cr-stage");
     const canvas = stage.querySelector("canvas");
-    const overlay = stage.querySelector(".cr-overlay");
     const statusEl = stage.querySelector(".cr-status");
     const startBtn = stage.querySelector(".cr-start");
     const hud = stage.querySelector(".cr-hud");
@@ -270,13 +272,46 @@
             '<p class="mt-3"><a class="cr-ashore" href="' + stop.href + '">Go ashore &rarr;</a>' +
             (coarse ? "" : ' <span class="cr-hint">or press <kbd class="cr-key">E</kbd></span>') + "</p>";
         card.classList.add("is-visible");
-        chips[i].classList.add("is-visited");
-        if (game && game.started) toast(stop.name + " landing ahead. " + (coarse ? "Tap Go ashore" : "Press E") + " to visit the page.");
+        if (game && game.started) {
+            chips[i].classList.add("is-visited");
+            toast(stop.name + " landing ahead. " + (coarse ? "Tap Go ashore" : "Press E") + " to visit the page.");
+        }
     }
 
     function setFade(on) { fadeEl.classList.toggle("is-on", on); }
 
+    // Going ashore remembers the landing (for this tab only), so coming back puts you in the canoe just
+    // off that dock. It's used up on the way back in, so a refresh starts the trip over.
+    function saveTrip(i) {
+        try {
+            sessionStorage.setItem(TRIP_KEY, JSON.stringify({
+                stop: i,
+                visited: chips.map(function (chip) { return chip.classList.contains("is-visited"); }),
+                time: Date.now()
+            }));
+        } catch (e) { /* storage is blocked; you'll start at the put-in instead */ }
+    }
+    function takeTrip() {
+        try {
+            const trip = JSON.parse(sessionStorage.getItem(TRIP_KEY));
+            sessionStorage.removeItem(TRIP_KEY);
+            if (trip && STOPS[trip.stop] && Date.now() - trip.time < 60 * 60 * 1000) return trip;
+        } catch (e) { /* storage is blocked or the entry is malformed */ }
+        return null;
+    }
+    function resumeTrip(trip) {
+        trip.visited.forEach(function (v, i) { if (v && chips[i]) chips[i].classList.add("is-visited"); });
+        game.resume(trip.stop);
+    }
+    let trip = takeTrip();
+    if (trip) {
+        stage.classList.add("is-resuming"); // skip the introduction and wait in the dark for the river
+        setFade(true);
+    }
+
     function fail(message) {
+        stage.classList.remove("is-resuming");
+        setFade(false);
         statusEl.innerHTML = message + '<br><span class="cr-fail-links">' + STOPS.map(function (s) {
             return '<a href="' + s.href + '">' + s.name + "</a>";
         }).join(" &middot; ") + "</span>";
@@ -306,7 +341,7 @@
         try {
             game = await createGame(THREE, {
                 canvas: canvas, stage: stage, lowPower: lowPower, reduceMotion: reduceMotion,
-                labels: labels, showStop: showStop, toast: toast, setFade: setFade
+                labels: labels, showStop: showStop, toast: toast, setFade: setFade, saveTrip: saveTrip
             });
         } catch (e) {
             console.error(e);
@@ -315,6 +350,11 @@
         statusEl.hidden = true;
         startBtn.hidden = false;
         new ResizeObserver(function () { game.resize(); }).observe(stage);
+        if (trip) {
+            resumeTrip(trip);
+            stage.classList.remove("is-resuming");
+            trip = null;
+        }
         updateActive();
     }
 
@@ -340,8 +380,12 @@
         load();
     }
     document.addEventListener("visibilitychange", updateActive);
+    // the browser's back button can restore this page as it was left, faded out at a dock
     window.addEventListener("pageshow", function (e) {
-        if (e.persisted && game) game.returned();
+        if (!e.persisted || !game) return;
+        const back = takeTrip();
+        if (back) resumeTrip(back);
+        else game.returned();
     });
 
     function begin() {
@@ -349,31 +393,40 @@
         game.start();
         stage.focus({ preventScroll: true });
     }
-    startBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        begin();
-    });
-    overlay.addEventListener("click", function () {
-        if (!startBtn.hidden) begin();
+    startBtn.addEventListener("click", begin);
+
+    // "Go ashore" fades out and remembers the landing before following the link
+    card.addEventListener("click", function (e) {
+        if (!game || !e.target.closest(".cr-ashore") || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        game.goAshore();
     });
 
     const KEYS = {
         KeyW: "forward", ArrowUp: "forward", KeyS: "back", ArrowDown: "back",
         KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right"
     };
-    stage.addEventListener("keydown", function (e) {
-        // keys on the landing buttons and links keep their normal behaviour
-        if (!game || e.target !== stage || e.altKey || e.ctrlKey || e.metaKey) return;
+    // The river fills most of the page, so the steering keys work with nothing focused too, as long as
+    // the river is what's on screen. Keys on buttons and links keep their normal behaviour.
+    function riverInView() {
+        const r = stage.getBoundingClientRect(), mid = window.innerHeight / 2;
+        return r.top < mid && r.bottom > mid;
+    }
+    document.addEventListener("keydown", function (e) {
+        if (!game || e.altKey || e.ctrlKey || e.metaKey) return;
+        const onStage = e.target === stage;
+        if (!onStage && !(e.target === document.body && riverInView())) return;
         const key = KEYS[e.code];
         if (key) {
             e.preventDefault();
+            if (!onStage) stage.focus({ preventScroll: true }); // so the key-up lands on the river too
             game.start();
             game.setKey(key, true);
-        } else if (e.code === "KeyE" || e.code === "Enter" || e.code === "Space") {
+        } else if (e.code === "KeyE" || (onStage && (e.code === "Enter" || e.code === "Space"))) {
             e.preventDefault();
             if (!game.started) begin();
             else if (e.code !== "Space") game.goAshore();
-        } else if (e.code === "Escape" && stage.classList.contains("is-expanded")) {
+        } else if (onStage && e.code === "Escape" && stage.classList.contains("is-expanded")) {
             toggleExpanded();
         }
     });
@@ -725,7 +778,7 @@ if (vCanopy > 0.001) {
                 { r: 2600, w: 950, h: 650, color: "#3d5764" },
                 { r: 3700, w: 1300, h: 820, color: "#48607a" }
             ];
-            const cz = -420, SEG = 220, ROWS = 7;
+            const cz = (RIVER.zMax + RIVER.zMin) / 2, SEG = 220, ROWS = 7;
             const mat = atmos(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
             layers.forEach(function (layer, k) {
                 const pos = [], col = [], index = [];
@@ -1280,8 +1333,8 @@ diffuseColor.a *= 1.0 + 0.3 * max(0.0, 0.5 * log2(max(dot(crDx, crDx), dot(crDy,
             uCanoe: { value: new THREE.Vector4() },
             uCanoeSpeed: { value: 0 },
             uRipples: { value: ripples },
-            uDeep: { value: color("#2f5244") },
-            uShallow: { value: color("#7d855c") },
+            uDeep: { value: color("#2a5163") },
+            uShallow: { value: color("#6f8a7e") },
             uBank: { value: color("#1d2a18") }
         }, U);
 
@@ -1341,9 +1394,9 @@ void main() {
     vec2 q = vRiver.xy;
 
     // ripples carried downstream; choppier in riffles and shallows
-    vec2 s = waveSlope(q * 0.045 + vec2(0.0, -t * 0.045)) * 0.55
-           + waveSlope(q * vec2(0.12, 0.09) + vec2(0.37, -t * 0.1)) * 0.4
-           + waveSlope(q * 0.33 + vec2(0.71, -t * 0.24)) * 0.28;
+    vec2 s = waveSlope(q * 0.045 + vec2(0.0, -t * 0.075)) * 0.55
+           + waveSlope(q * vec2(0.12, 0.09) + vec2(0.37, -t * 0.16)) * 0.4
+           + waveSlope(q * 0.33 + vec2(0.71, -t * 0.4)) * 0.28;
     float chop = clamp(rock * 1.4 + (1.0 - smoothstep(0.2, 1.2, depth)) * 0.5, 0.0, 1.0);
     s *= 0.3 + 1.1 * chop;
     vec2 g = s.x * across + s.y * flow;
@@ -1401,7 +1454,7 @@ void main() {
     // white water around rocks, along the shore, and in the wake
     float shore = 1.0 - smoothstep(0.0, 0.15, depth);
     float amount = rock + shore * 0.25 * crNoise(q * vec2(0.4, 0.15)) + wake + ringFoam;
-    float lace = crNoise(q * vec2(1.3, 0.55) + vec2(0.0, -t * 1.2)) * 0.55 + crNoise(q * vec2(3.7, 2.2) + vec2(0.0, -t * 2.1)) * 0.45;
+    float lace = crNoise(q * vec2(1.3, 0.55) + vec2(0.0, -t * 1.6)) * 0.55 + crNoise(q * vec2(3.7, 2.2) + vec2(0.0, -t * 3.4)) * 0.45;
     float foam = smoothstep(0.0, 0.3, amount * 1.2 - (1.0 - lace));
 
     vec3 col = mix(body, refl, fres) + spec * (1.0 - foam);
@@ -2049,19 +2102,19 @@ void main() {
         const keys = { forward: false, back: false, left: false, right: false };
         const cam = { yaw: 0, dragYaw: 0, dragPitch: 0, lastLook: -10 };
         let started = false, active = false, raf = 0, lastTime = 0, time = 0;
-        let manualTimer = 0, thrS = 0, steerS = 0, autopilot = true, bump = 0;
+        let manualTimer = 0, thrS = 0, steerS = 0, pullS = 0, bump = 0;
         let currentStop = -1, busy = false;
 
         function currentAt(x, z) {
             const s = riverSlope(z), inv = 1 / Math.sqrt(1 + s * s), hw = riverHalfWidth(z);
             const o = clamp((x - riverX(z)) * inv / hw, -1, 1);
-            const speed = (0.85 + 1.0 * riffle(z)) * (1 - 0.55 * o * o);
+            const speed = (CURRENT + 1.0 * riffle(z)) * (1 - 0.5 * o * o);
             return { x: -s * inv * speed, z: -inv * speed };
         }
 
-        function placeBoat(z) {
+        function placeBoat(z, x) {
             boat.z = z;
-            boat.x = riverX(z);
+            boat.x = x === undefined ? riverX(z) : x;
             boat.yaw = riverYaw(z);
             const c = currentAt(boat.x, boat.z);
             boat.vx = c.x;
@@ -2113,12 +2166,19 @@ void main() {
             boat.w -= a * (rx * nx + rz * nz) * pen * 3;
         }
 
-        function stepBoat(dt, thr, steer, power) {
+        function stepBoat(dt, thr, steer, power, pull) {
             const fx = -Math.sin(boat.yaw), fz = -Math.cos(boat.yaw), rx = Math.cos(boat.yaw), rz = -Math.sin(boat.yaw);
             const c = currentAt(boat.x, boat.z);
+            if (pull > 0) {
+                // left to drift, the canoe works its way out to the middle of the channel, clear of the rocks
+                const s = riverSlope(boat.z), inv = 1 / Math.sqrt(1 + s * s);
+                const k = -0.08 * pull * (boat.x - riverX(boat.z)) * inv;
+                c.x += k * inv;
+                c.z -= k * s * inv;
+            }
             const relX = boat.vx - c.x, relZ = boat.vz - c.z;
             const along = relX * fx + relZ * fz, lat = relX * rx + relZ * rz;
-            const thrust = thr * (thr > 0 ? 2.4 : 1.6) * power;
+            const thrust = thr * (thr > 0 ? 1.9 : 1.6) * power;
             const aAlong = thrust - 0.3 * along - 0.09 * along * Math.abs(along);
             const aLat = -2.2 * lat; // the hull resists sliding sideways
             boat.vx += (fx * aAlong + rx * aLat) * dt;
@@ -2134,12 +2194,12 @@ void main() {
             boat.speed = Math.max(0, along);
         }
 
-        // Holds the centre of the channel (where no boulders sit) at an easy pace
+        // Before Start: holds the centre of the channel (where no boulders sit) at an easy pace
         function autopilotInput() {
             const look = 14 + 2.5 * Math.hypot(boat.vx, boat.vz);
             const p = riverPoint(boat.z - look, 0);
             const desired = Math.atan2(-(p.x - boat.x), -(p.z - boat.z));
-            return { thr: 0.5, steer: clamp(wrapAngle(desired - boat.yaw) * 2.4 - boat.w * 0.8, -1, 1) };
+            return { thr: 0.3, steer: clamp(wrapAngle(desired - boat.yaw) * 2.4 - boat.w * 0.8, -1, 1) };
         }
 
         // Paddle stroke: a power phase in the water, then the blade feathers and swings forward
@@ -2292,14 +2352,13 @@ void main() {
             U.uTime.value = time;
 
             const thrIn = (keys.forward ? 1 : 0) - (keys.back ? 1 : 0), steerIn = (keys.left ? 1 : 0) - (keys.right ? 1 : 0);
-            if (thrIn || steerIn) manualTimer = 20;
+            if (thrIn || steerIn) manualTimer = IDLE_DELAY;
             else manualTimer = Math.max(0, manualTimer - dt);
-            const wasAuto = autopilot;
-            autopilot = !started || manualTimer <= 0;
-            if (autopilot && !wasAuto && started) ui.toast("Drifting on autopilot. Paddle to take over.", 3000);
-            const input = autopilot ? autopilotInput() : { thr: thrIn, steer: steerIn };
+            // before Start the canoe paddles itself along; after that the current carries you until you paddle
+            const input = started ? { thr: thrIn, steer: steerIn } : autopilotInput();
             thrS = damp(thrS, input.thr, 4, dt);
             steerS = damp(steerS, input.steer, 6, dt);
+            pullS = damp(pullS, started && manualTimer <= 0 ? 1 : 0, 1.5, dt);
 
             // paddle side follows the steering: paddling on the right turns you left
             if (steerS > 0.35) stroke.side = 1;
@@ -2310,7 +2369,7 @@ void main() {
             const power = lerp(1, strokePower(), stroke.act);
 
             const steps = Math.ceil(dt / (1 / 60));
-            for (let i = 0; i < steps; i++) stepBoat(dt / steps, thrS, autopilot ? input.steer : steerIn, power);
+            for (let i = 0; i < steps; i++) stepBoat(dt / steps, thrS, input.steer, power, pullS);
 
             // a ride over the riffles, a lean into turns and strokes, and a jolt on a bump
             bump = Math.max(0, bump - dt * 2.5);
@@ -2509,8 +2568,7 @@ void main() {
             busy = true;
             ui.setFade(true);
             setTimeout(function () {
-                placeBoat(i < 0 ? RIVER.start : STOPS[i].z + 48);
-                manualTimer = started ? 20 : 0; // you're in control after a jump, not the autopilot
+                placeBoat(i < 0 ? RIVER.start : STOPS[i].z + 40);
                 ui.setFade(false);
                 busy = false;
                 if (!active) {
@@ -2518,6 +2576,19 @@ void main() {
                     render();
                 }
             }, ui.reduceMotion ? 0 : 450);
+        }
+
+        // Back from a landing's page: the canoe sits just off the end of its dock and the current takes it on
+        function pushOff(i) {
+            const tip = stopsInfo[i].tip, side = STOPS[i].side;
+            const s = riverSlope(tip.z), inv = 1 / Math.sqrt(1 + s * s);
+            // 4 m downstream of the dock's end and 1 m in toward the bank
+            placeBoat(tip.z - 4 * inv - side * s * inv, tip.x - 4 * s * inv + side * inv);
+            currentStop = i; // you've just been there, so its card stays put away
+            ui.showStop(-1);
+            manualTimer = 0;
+            thrS = steerS = 0;
+            stroke.act = 0;
         }
 
         placeBoat(RIVER.start);
@@ -2531,10 +2602,25 @@ void main() {
             start: function () {
                 if (started) return;
                 started = true;
-                manualTimer = 20;
                 ui.stage.classList.add("is-playing");
-                ui.toast(coarse ? "Hold Paddle to go, and the arrows to steer." : "W or ↑ to paddle, A/D or ←/→ to steer. Drag to look around.", 5000);
+                ui.toast(coarse ? "The current carries you. Hold Paddle to go faster, and the arrows to steer."
+                    : "The current carries you. W or ↑ to paddle faster, A/D or ←/→ to steer.", 5000);
                 setActive(onScreen && !document.hidden);
+            },
+            // back from a landing's page, by a fresh load or the browser restoring this one
+            resume: function (i) {
+                started = true;
+                busy = false;
+                ui.stage.classList.add("is-playing");
+                pushOff(i);
+                ui.setFade(false);
+                const next = STOPS[i + 1];
+                ui.toast("Back in the canoe. " + (next ? "Next stop: " + next.name + "." : "That was the last landing. Enjoy the float!"), 4500);
+                setActive(onScreen && !document.hidden);
+                if (!active) {
+                    update(0);
+                    render();
+                }
             },
             setActive: setActive,
             resize: resize,
@@ -2554,10 +2640,11 @@ void main() {
                 if (currentStop < 0 || busy) return;
                 busy = true;
                 ui.setFade(true);
+                ui.saveTrip(currentStop);
                 const href = STOPS[currentStop].href;
                 setTimeout(function () { window.location.href = href; }, ui.reduceMotion ? 0 : 400);
             },
-            // back on this page via the browser's back button, which restores it faded out mid-trip
+            // back on this page by the browser's back button from somewhere other than a landing
             returned: function () {
                 busy = false;
                 ui.setFade(false);

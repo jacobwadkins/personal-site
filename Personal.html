@@ -18,96 +18,73 @@
     </nav>
 </header>
 
-<main id="main-content" class="relative mt-2">
-    <!-- Background Image -->
-    <div class="flex justify-center w-full mx-auto overflow-hidden px-2 md:px-4">
-        <img src="Background.jpg" alt="Nevada Fall, Yosemite National Park" class="w-full h-auto mb-4">
-    </div>
-
- <!-- Small Photo (top right on both mobile and desktop) -->
-    <div class="absolute top-4 right-4 md:top-12 md:right-12">
-        <img src="profile.jpg" alt="Jacob Wadkins" class="w-16 h-16 md:w-48 md:h-48 object-cover rounded-full border-2 border-white">
-    </div>
-
-<!-- Container for the navigation buttons -->
-    <div class="flex flex-col items-end w-full px-4 mt-4 md:absolute md:right-12 md:top-64">
-        <!-- Interests Box -->
-        <a href="Interests.html" class="w-full md:w-auto bg-white shadow-md rounded px-8 py-2 text-center hover:bg-red-500 mb-2 transition duration-300">
-            <h3 class="text-gray-700 text-xl font-bold">Interests</h3>
-        </a>
-        <!-- Travels Box -->
-        <a href="Travels.html" class="w-full md:w-auto bg-white shadow-md rounded px-8 py-2 text-center hover:bg-red-500 mb-2 transition duration-300">
-            <h3 class="text-gray-700 text-xl font-bold">Travels</h3>
-        </a>
-        <!-- Quotes Box -->
-        <a href="Quotes.html" class="w-full md:w-auto bg-white shadow-md rounded px-8 py-2 text-center hover:bg-red-500 mb-2 transition duration-300">
-            <h3 class="text-gray-700 text-xl font-bold">Quotes</h3>
-        </a>
-
-        <!-- Contact Me Box -->
-        <a href="Contact.html" class="w-full md:w-auto bg-white shadow-md rounded px-8 py-2 text-center hover:bg-red-500 transition duration-300">
-            <h3 class="text-gray-700 text-xl font-bold">Contact Me</h3>
-        </a>
-    </div>
-    <!-- About Me Box -->
-    <div class="w-full xl:w-2/5 rounded px-4 md:px-8 pt-4 md:pt-6 pb-4 mt-4 xl:mt-0 xl:absolute xl:top-20 xl:left-12 bg-white bg-opacity-80 backdrop-filter backdrop-blur-sm">
-        <h2 class="text-gray-700 text-xl md:text-2xl font-bold mb-2 md:mb-4">About Me</h2>
-        <p class="text-gray-700 text-sm md:text-base justify-full">   
-            I am an environmental engineer with over a decade of experience, and I specialize in the design of wastewater treatment systems for industrial clients. I've had the privilege of contributing to the compliance and sustainability of numerous municipal and industrial clients via wastewater treatment systems design, a field that demands a seamless integration of multiple engineering disciplines. <br><br>
-            <span class="font-bold">Developing comprehensive systems that effectively manage and treat wastewater and thereby transform challenges into opportunities for business sustainability and excellence is what excites me most.</span> The joy I find in my work comes from the collaborative process of designing and implementing these systems, ensuring they meet the specific needs of each client. My commitment to this field is driven by a deep-seated belief in responsible stewardship of our natural resources, and I continuously seek to apply innovative technologies and methods to further this cause while never losing sight of clients' business needs.
-        </p>
-    </div>
-
-    <!-- Canoe river game (scene and controls in canoe-river.js) -->
-    <section id="canoe-river" class="w-11/12 container mx-auto mt-8 mb-12">
-        <div class="bg-white shadow-md rounded px-4 sm:px-8 pt-6 pb-8">
-            <p class="tt-kicker">Take the scenic route</p>
-            <h2 class="text-gray-700 text-2xl font-bold mb-2">Paddle down the river</h2>
-            <p class="text-gray-700 mb-6 max-w-3xl">
-                Every landing on this Blue Ridge river is a page of the site. Paddle up to a dock and go ashore, or sit back and let the current carry you along.
-            </p>
-
-            <div class="cr-stage" tabindex="0" aria-label="Canoe game: paddle down a river to each page of the site" aria-describedby="cr-help">
-                <canvas aria-hidden="true"></canvas>
-                <div class="cr-vignette"></div>
-                <div class="cr-labels" aria-hidden="true"></div>
-                <nav class="cr-hud" aria-label="River landings"></nav>
-                <div class="cr-card"></div>
-                <div class="cr-touch">
-                    <button type="button" data-key="left" aria-label="Steer left">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-                    </button>
-                    <button type="button" data-key="forward">Paddle</button>
-                    <button type="button" data-key="right" aria-label="Steer right">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-                    </button>
-                </div>
-                <button type="button" class="cr-fs" aria-label="Full screen">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+<main id="main-content">
+    <!-- Canoe river game (scene and controls in canoe-river.js). The About Me introduction sits over the
+         river until you start paddling. -->
+    <section id="canoe-river" class="cr-page" aria-labelledby="about-me">
+        <div class="cr-stage" tabindex="0" aria-label="Canoe game: paddle down a river to each page of the site" aria-describedby="cr-help">
+            <canvas aria-hidden="true"></canvas>
+            <div class="cr-vignette"></div>
+            <div class="cr-labels" aria-hidden="true"></div>
+            <nav class="cr-hud" aria-label="River landings"></nav>
+            <div class="cr-card"></div>
+            <div class="cr-touch">
+                <button type="button" data-key="left" aria-label="Steer left">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
                 </button>
-                <div class="cr-toast" role="status"></div>
-                <div class="cr-fade"></div>
-                <div class="cr-overlay">
-                    <div>
-                        <p class="cr-overlay-title">Paddle down the river</p>
+                <button type="button" data-key="forward">Paddle</button>
+                <button type="button" data-key="right" aria-label="Steer right">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+            <button type="button" class="cr-fs" aria-label="Full screen">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+            </button>
+            <div class="cr-toast" role="status"></div>
+            <div class="cr-fade"></div>
+            <div class="cr-overlay">
+                <div class="cr-intro">
+                    <div class="cr-intro-scroll">
+                        <div class="cr-intro-head">
+                            <img src="profile.jpg" alt="Jacob Wadkins" class="cr-intro-photo">
+                            <h2 id="about-me" class="cr-intro-title">About Me</h2>
+                        </div>
+                        <p>
+                            I am an environmental engineer with over a decade of experience, and I specialize in the design of wastewater treatment systems for industrial clients. I've had the privilege of contributing to the compliance and sustainability of numerous municipal and industrial clients via wastewater treatment systems design, a field that demands a seamless integration of multiple engineering disciplines.
+                        </p>
+                        <p>
+                            <span class="font-bold">Developing comprehensive systems that effectively manage and treat wastewater and thereby transform challenges into opportunities for business sustainability and excellence is what excites me most.</span> The joy I find in my work comes from the collaborative process of designing and implementing these systems, ensuring they meet the specific needs of each client. My commitment to this field is driven by a deep-seated belief in responsible stewardship of our natural resources, and I continuously seek to apply innovative technologies and methods to further this cause while never losing sight of clients' business needs.
+                        </p>
+                    </div>
+                    <div class="cr-intro-foot">
+                        <p class="tt-kicker">Take the scenic route</p>
+                        <p class="cr-intro-cta">Every landing on this Blue Ridge river is a page of the site. Paddle up to a dock and go ashore, or sit back and let the current carry you along.</p>
                         <p class="cr-status"><span class="cr-spinner" aria-hidden="true"></span>Loading the river&hellip;</p>
                         <button type="button" class="cr-start" hidden>Start paddling</button>
                     </div>
                 </div>
+                <p class="cr-resume-note"><span class="cr-spinner" aria-hidden="true"></span>Back to the river&hellip;</p>
             </div>
+        </div>
 
-            <p id="cr-help" class="text-sm text-gray-500 mt-3">
+        <div class="cr-below">
+            <p id="cr-help">
                 <span class="cr-keys-help">
                     <kbd class="cr-key">W</kbd> or <kbd class="cr-key">&uarr;</kbd> paddle,
                     <kbd class="cr-key">A</kbd> <kbd class="cr-key">D</kbd> or <kbd class="cr-key">&larr;</kbd> <kbd class="cr-key">&rarr;</kbd> steer,
                     <kbd class="cr-key">S</kbd> back-paddle, <kbd class="cr-key">E</kbd> go ashore, drag to look around.
                 </span>
-                <span class="cr-touch-help">Hold Paddle to move and the arrows to steer, and drag the scene to look around.</span>
-                The buttons at the top of the page go to the same places.
+                <span class="cr-touch-help">Hold Paddle to speed up and the arrows to steer, and drag the scene to look around.</span>
             </p>
+            <nav class="cr-links" aria-label="Personal pages">
+                Skip the river:
+                <a href="Interests.html">Interests</a> &middot;
+                <a href="Travels.html">Travels</a> &middot;
+                <a href="Quotes.html">Quotes</a> &middot;
+                <a href="Contact.html">Contact</a>
+            </nav>
         </div>
     </section>
-
 </main>
 
 
