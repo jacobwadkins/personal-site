@@ -46,6 +46,7 @@
     const PADDLER_Z = 1.47;  // the stern seat, in the canoe's frame (bow toward -z)
     const STOP_RANGE = 24;   // how close to a dock before its card appears
     const IDLE_DELAY = 5;    // seconds without paddling before the canoe drifts back to the middle
+    const BOOST_DELAY = 3;   // seconds of holding paddle before the paddler digs in and the canoe goes twice as fast
     const TRIP_KEY = "canoeRiver"; // sessionStorage: the landing you went ashore at, to pick the trip back up
 
     // Fall foliage, shared by the instanced trees and the canopy shading on the far hillsides
@@ -2102,7 +2103,7 @@ void main() {
         const keys = { forward: false, back: false, left: false, right: false };
         const cam = { yaw: 0, dragYaw: 0, dragPitch: 0, lastLook: -10 };
         let started = false, active = false, raf = 0, lastTime = 0, time = 0;
-        let manualTimer = 0, thrS = 0, steerS = 0, pullS = 0, bump = 0;
+        let manualTimer = 0, thrS = 0, steerS = 0, pullS = 0, bump = 0, holdTime = 0, boost = 1;
         let currentStop = -1, busy = false;
 
         function currentAt(x, z) {
@@ -2146,8 +2147,14 @@ void main() {
                             const dx = px - ob.x, dz = pz - ob.z, rr = ob.r + hb;
                             const d2 = dx * dx + dz * dz;
                             if (d2 < rr * rr) {
-                                const d = Math.sqrt(d2) || 0.001;
-                                push(dx / d, dz / d, rr - d, a, rx, rz);
+                                const d = Math.sqrt(d2) || 0.001, nx = dx / d, nz = dz / d, pen = rr - d;
+                                push(nx, nz, pen, a, rx, rz);
+                                // slide round it on the side the hull is already on (or downstream, alongside it),
+                                // so the current can't pin the canoe against a rock
+                                const side = dx - dz * s < 0 ? -1 : 1;
+                                const flip = (-nz - nx * s) * side + 0.3 * (nz * s - nx) < 0 ? -1 : 1;
+                                boat.x -= nz * flip * pen * 0.6;
+                                boat.z += nx * flip * pen * 0.6;
                             }
                         }
                     }
@@ -2178,7 +2185,8 @@ void main() {
             }
             const relX = boat.vx - c.x, relZ = boat.vz - c.z;
             const along = relX * fx + relZ * fz, lat = relX * rx + relZ * rz;
-            const thrust = thr * (thr > 0 ? 1.9 : 1.6) * power;
+            // boost 2 takes about 4.3x the thrust to double the top speed against the drag below
+            const thrust = thr * (thr > 0 ? 1.9 * Math.pow(boost, 2.1) : 1.6) * power;
             const aAlong = thrust - 0.3 * along - 0.09 * along * Math.abs(along);
             const aLat = -2.2 * lat; // the hull resists sliding sideways
             boat.vx += (fx * aAlong + rx * aLat) * dt;
@@ -2359,13 +2367,17 @@ void main() {
             thrS = damp(thrS, input.thr, 4, dt);
             steerS = damp(steerS, input.steer, 6, dt);
             pullS = damp(pullS, started && manualTimer <= 0 ? 1 : 0, 1.5, dt);
+            // keep paddling and the strokes come twice as fast and hard
+            holdTime = started && thrIn > 0 ? holdTime + dt : 0;
+            const boosting = holdTime > BOOST_DELAY;
+            boost = damp(boost, boosting ? 2 : 1, boosting ? 1.5 : 3, dt);
 
             // paddle side follows the steering: paddling on the right turns you left
             if (steerS > 0.35) stroke.side = 1;
             else if (steerS < -0.35) stroke.side = -1;
             stroke.sideS = damp(stroke.sideS, stroke.side, 4, dt);
             stroke.act = damp(stroke.act, Math.abs(thrS) > 0.08 ? 1 : 0, 3, dt);
-            if (stroke.act > 0.02) stroke.phase = (stroke.phase + (0.45 + 0.4 * Math.abs(thrS)) * dt) % 1;
+            if (stroke.act > 0.02) stroke.phase = (stroke.phase + (0.45 + 0.4 * Math.abs(thrS)) * boost * dt) % 1;
             const power = lerp(1, strokePower(), stroke.act);
 
             const steps = Math.ceil(dt / (1 / 60));
@@ -2586,8 +2598,9 @@ void main() {
             placeBoat(tip.z - 4 * inv - side * s * inv, tip.x - 4 * s * inv + side * inv);
             currentStop = i; // you've just been there, so its card stays put away
             ui.showStop(-1);
-            manualTimer = 0;
+            manualTimer = holdTime = 0;
             thrS = steerS = 0;
+            boost = 1;
             stroke.act = 0;
         }
 
