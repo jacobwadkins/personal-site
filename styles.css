@@ -351,3 +351,418 @@
         animation: none;
     }
 }
+
+/* Canoe river game (Personal page) */
+.cr-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 320px;
+    max-height: 80vh;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background: linear-gradient(#9fb5cb, #6f8a7a 55%, #2f4636);
+    color: white;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 639px) {
+    .cr-stage {
+        aspect-ratio: 4 / 5;
+    }
+}
+
+.cr-stage:focus {
+    outline: none;
+}
+
+.cr-stage:focus-visible {
+    outline: 3px solid #3b82f6;
+    outline-offset: -3px;
+}
+
+.cr-stage:fullscreen,
+.cr-stage.is-expanded {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+}
+
+.cr-stage.is-expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+}
+
+.cr-stage canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+}
+
+.cr-stage canvas.is-dragging {
+    cursor: grabbing;
+}
+
+.cr-vignette,
+.cr-labels,
+.cr-fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.cr-vignette {
+    background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 60%, rgba(8, 14, 12, 0.4) 100%);
+}
+
+.cr-hud {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 3.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.cr-hud[hidden] {
+    display: none;
+}
+
+.cr-chip,
+.cr-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem 0.25rem 0.3rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: white;
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.cr-chip {
+    transition: background-color 0.2s;
+}
+
+.cr-chip:hover,
+.cr-chip:focus-visible {
+    background: rgba(30, 58, 138, 0.9);
+}
+
+.cr-chip-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+/* landings you've reached get the site's red */
+.cr-chip.is-visited .cr-chip-num {
+    color: white;
+    background: #ef4444;
+}
+
+.cr-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 0.85rem;
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+.cr-label::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    margin-left: -6px;
+    border: 6px solid transparent;
+    border-bottom: 0;
+    border-top-color: rgba(15, 23, 42, 0.55);
+}
+
+.cr-label-dist {
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.cr-card {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    width: min(22rem, calc(100% - 1.5rem));
+    padding: 0.9rem 1.1rem 1rem;
+    border-radius: 0.5rem;
+    color: #334155;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+}
+
+.cr-card.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+}
+
+.cr-card-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+}
+
+.cr-ashore {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    color: white;
+    background: #1e3a8a;
+    transition: background-color 0.3s;
+}
+
+.cr-ashore:hover,
+.cr-ashore:focus-visible {
+    background: #ef4444;
+}
+
+.cr-hint {
+    margin-left: 0.4rem;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.cr-key {
+    display: inline-block;
+    min-width: 1.5em;
+    padding: 0 0.3em;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 0.25rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-align: center;
+    color: #475569;
+    background: #f8fafc;
+}
+
+.cr-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.12) 75%);
+    cursor: pointer;
+    transition: opacity 0.5s, visibility 0.5s;
+}
+
+.cr-stage.is-playing .cr-overlay {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.cr-overlay-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.cr-status {
+    margin-top: 0.6rem;
+    font-size: 0.9rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.cr-status.is-error {
+    max-width: 26rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: rgba(15, 23, 42, 0.75);
+    cursor: auto;
+}
+
+.cr-fail-links a {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.cr-spinner {
+    display: inline-block;
+    width: 0.9rem;
+    height: 0.9rem;
+    margin-right: 0.5rem;
+    vertical-align: -0.1rem;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+    border-radius: 9999px;
+    animation: tt-spin 0.9s linear infinite;
+}
+
+.cr-status.is-error .cr-spinner {
+    display: none;
+}
+
+.cr-start {
+    margin-top: 0.9rem;
+    padding: 0.6rem 1.6rem;
+    border-radius: 0.25rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: white;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.cr-start:hover,
+.cr-start:focus-visible {
+    color: white;
+    background: #ef4444;
+}
+
+.cr-fs {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.375rem;
+    background: rgba(15, 23, 42, 0.55);
+    transition: background-color 0.2s;
+}
+
+.cr-fs:hover,
+.cr-fs:focus-visible {
+    background: rgba(30, 58, 138, 0.9);
+}
+
+.cr-toast {
+    position: absolute;
+    left: 50%;
+    top: 3.4rem;
+    max-width: calc(100% - 2rem);
+    padding: 0.4rem 0.9rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.72);
+    opacity: 0;
+    transform: translateX(-50%);
+    pointer-events: none;
+    transition: opacity 0.4s;
+}
+
+.cr-toast.is-visible {
+    opacity: 1;
+}
+
+@media (max-width: 639px) {
+    .cr-toast {
+        top: 5.6rem; /* below the two rows of landing buttons */
+    }
+}
+
+.cr-fade {
+    background: #0b1210;
+    opacity: 0;
+    transition: opacity 0.45s;
+}
+
+.cr-fade.is-on {
+    opacity: 1;
+}
+
+/* on-screen paddle and steering buttons for touch screens */
+.cr-touch {
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    display: none;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.cr-touch button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    max-width: 6.5rem;
+    padding: 0.85rem 0;
+    border-radius: 9999px;
+    font-weight: 700;
+    color: white;
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    touch-action: none;
+}
+
+.cr-touch button.is-down {
+    background: rgba(30, 58, 138, 0.9);
+}
+
+.cr-touch-help {
+    display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .cr-touch {
+        display: flex;
+    }
+
+    .cr-card {
+        bottom: 4.6rem;
+    }
+
+    .cr-keys-help {
+        display: none;
+    }
+
+    .cr-touch-help {
+        display: inline;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cr-card, .cr-overlay, .cr-toast, .cr-fade {
+        transition: none;
+    }
+
+    .cr-spinner {
+        animation: none;
+    }
+}
