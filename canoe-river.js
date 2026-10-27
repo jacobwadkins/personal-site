@@ -2643,7 +2643,15 @@ void main() {
             busy = true;
             ui.setFade(true);
             setTimeout(function () {
-                placeBoat(i < 0 ? RIVER.start : STOPS[i].z + 40);
+                if (i < 0) {
+                    placeBoat(RIVER.start);
+                } else {
+                    // Arrive just upstream of the dock, inside the landing's 20 m radius.
+                    const tip = stopsInfo[i].tip, side = STOPS[i].side;
+                    const slope = riverSlope(tip.z), inv = 1 / Math.sqrt(1 + slope * slope);
+                    placeBoat(tip.z + 15 * inv + side * 3 * slope * inv,
+                        tip.x + 15 * slope * inv - side * 3 * inv);
+                }
                 ui.setFade(false);
                 busy = false;
                 if (!active) {
