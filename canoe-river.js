@@ -1898,15 +1898,30 @@ void main() {
             k.cyl(0.17, 0.5, "#d9a21b", 0, 0.02, -1.1, 0, 0.4, Math.PI / 2, 12); // dry bag in the bow
             canoe.add(k.build());
 
-            // the paddler, sitting in the stern; arms and paddle are posed every frame
-            const skin = atmos(new THREE.MeshLambertMaterial({ color: color("#c99a7a") }));
-            const pfd = atmos(new THREE.MeshLambertMaterial({ color: color("#2f4a6d") }));
-            const shirt = atmos(new THREE.MeshLambertMaterial({ color: color("#a8996f") }));
-            const pants = atmos(new THREE.MeshLambertMaterial({ color: color("#3b3f46") }));
-            const hat = atmos(new THREE.MeshLambertMaterial({ color: color("#8c7a56") }));
-            const wood = atmos(new THREE.MeshLambertMaterial({ color: color("#b98f5c") }));
+            // A few pieces of gear give the boat the feeling of an actual day on the river.
+            const gear = new Kit();
+            gear.box(0.025, 0.025, 0.53, "#504838", 0, 0.20, -1.1, 0, 0.4, 0);
+            gear.box(0.32, 0.025, 0.025, "#504838", 0, 0.20, -1.1, 0, 0.4, 0);
+            // A coiled painter at the bow and small brass fasteners along the gunwales.
+            gear.add(new THREE.TorusGeometry(0.105, 0.012, 6, 20), "#d9c59c", 0, 0.17, -1.8, Math.PI / 2, 0, 0, 0);
+            for (const side of [-1, 1]) for (const s of [0.18, 0.35, 0.5, 0.65, 0.82]) {
+                gear.add(new THREE.SphereGeometry(0.018, 6, 4), "#d4b878", side * canoeHalfBeam(s), canoeSheer(s) + 0.025, (0.5 - s) * CANOE_LEN, 0, 0, 0, 0);
+            }
+            canoe.add(gear.build());
+
+            // The paddler is built in layers so the life jacket, clothing and head read as a
+            // person even from the usual view behind the canoe. The arms remain separately rigged.
+            const skin = atmos(new THREE.MeshStandardMaterial({ color: color("#c99778"), roughness: 0.9 }));
+            const pfd = atmos(new THREE.MeshStandardMaterial({ color: color("#be6036"), roughness: 0.85 }));
+            const pfdDark = atmos(new THREE.MeshStandardMaterial({ color: color("#803e2d"), roughness: 0.9 }));
+            const shirt = atmos(new THREE.MeshStandardMaterial({ color: color("#b6aa89"), roughness: 1 }));
+            const pants = atmos(new THREE.MeshStandardMaterial({ color: color("#414b4b"), roughness: 1 }));
+            const boots = atmos(new THREE.MeshStandardMaterial({ color: color("#66503d"), roughness: 1 }));
+            const hair = atmos(new THREE.MeshStandardMaterial({ color: color("#574433"), roughness: 1 }));
+            const hat = atmos(new THREE.MeshStandardMaterial({ color: color("#8c7a56"), roughness: 1 }));
+            const wood = atmos(new THREE.MeshStandardMaterial({ color: color("#b98f5c"), roughness: 0.7 }));
             const limb = function (r, mat) {
-                const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.9, 1, 7), mat);
+                const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.85, r, 1, 10), mat);
                 m.castShadow = true;
                 canoe.add(m);
                 return m;
@@ -1914,31 +1929,58 @@ void main() {
             const upper = new THREE.Group();
             upper.rotation.order = "YXZ";
             upper.position.set(0, 0.17, PADDLER_Z);
-            const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.32, 4, 10), pfd);
-            torso.position.set(0, 0.28, 0);
-            torso.scale.set(1.15, 1, 0.85);
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.105, 14, 10), skin);
-            head.position.set(0, 0.68, -0.02);
-            const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.015, 18), hat);
-            brim.position.set(0, 0.74, -0.02);
-            const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.1, 14), hat);
-            crown.position.set(0, 0.8, -0.02);
-            for (const m of [torso, head, brim, crown]) {
+            function part(geometry, material, x, y, z, sx, sy, sz) {
+                const m = new THREE.Mesh(geometry, material);
+                m.position.set(x, y, z);
+                m.scale.set(sx || 1, sy || 1, sz || 1);
                 m.castShadow = true;
                 upper.add(m);
+                return m;
             }
+            // Shirt and softly rounded jacket panels, with seams and straps visible from behind.
+            part(new THREE.SphereGeometry(1, 20, 14), shirt, 0, 0.31, 0, 0.215, 0.30, 0.13);
+            part(new THREE.SphereGeometry(1, 20, 14), pfd, 0, 0.30, 0.015, 0.205, 0.255, 0.145);
+            part(new THREE.BoxGeometry(0.30, 0.025, 0.018), pfdDark, 0, 0.22, 0.155);
+            part(new THREE.BoxGeometry(0.30, 0.025, 0.018), pfdDark, 0, 0.39, 0.15);
+            part(new THREE.BoxGeometry(0.055, 0.04, 0.022), hat, 0, 0.22, 0.167);
+            part(new THREE.BoxGeometry(0.055, 0.04, 0.022), hat, 0, 0.39, 0.162);
+            part(new THREE.CylinderGeometry(0.07, 0.085, 0.11, 12), skin, 0, 0.60, -0.01);
+            part(new THREE.SphereGeometry(1, 20, 16), skin, 0, 0.72, -0.02, 0.115, 0.145, 0.105);
+            // Hair at the back, ears and a subtle nose give the head shape in profile.
+            part(new THREE.SphereGeometry(1, 16, 12), hair, 0, 0.755, 0.025, 0.111, 0.105, 0.075);
+            for (const side of [-1, 1]) {
+                part(new THREE.SphereGeometry(1, 10, 8), skin, side * 0.112, 0.715, -0.02, 0.025, 0.035, 0.022);
+            }
+            part(new THREE.SphereGeometry(1, 10, 8), skin, 0, 0.715, -0.125, 0.027, 0.035, 0.035);
+            part(new THREE.CylinderGeometry(0.19, 0.20, 0.018, 24), hat, 0, 0.82, -0.02);
+            part(new THREE.CylinderGeometry(0.105, 0.125, 0.105, 20), hat, 0, 0.875, -0.02);
+            part(new THREE.CylinderGeometry(0.113, 0.115, 0.018, 20), pfdDark, 0, 0.835, -0.02);
             canoe.add(upper);
             for (const side of [-1, 1]) {
                 const hip = new THREE.Vector3(side * 0.1, 0.17, PADDLER_Z), knee = new THREE.Vector3(side * 0.15, 0.36, PADDLER_Z - 0.42);
-                orient(limb(0.075, pants), hip, knee);
-                orient(limb(0.06, pants), knee, new THREE.Vector3(side * 0.13, 0.0, PADDLER_Z - 0.8));
+                const foot = new THREE.Vector3(side * 0.13, 0.04, PADDLER_Z - 0.8);
+                orient(limb(0.09, pants), hip, knee);
+                orient(limb(0.065, pants), knee, foot);
+                const shoe = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), boots);
+                shoe.position.copy(foot).add(new THREE.Vector3(0, 0.015, -0.06));
+                shoe.scale.set(0.075, 0.055, 0.14);
+                shoe.castShadow = true;
+                canoe.add(shoe);
             }
             const paddle = new THREE.Group();
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.95, 6), wood);
-            shaft.position.y = -0.5;
-            const grip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.045, 0.04), wood);
-            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 0.016), wood);
-            blade.position.y = -1.2;
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.04, 10), wood);
+            shaft.position.y = -0.52;
+            const grip = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.10, 4, 8), wood);
+            grip.rotation.z = Math.PI / 2;
+            // A tapered, round-ended blade instead of a rectangular plank.
+            const bladeShape = new THREE.Shape();
+            bladeShape.moveTo(-0.035, -0.94);
+            bladeShape.bezierCurveTo(-0.10, -1.04, -0.12, -1.20, -0.095, -1.38);
+            bladeShape.quadraticCurveTo(0, -1.48, 0.095, -1.38);
+            bladeShape.bezierCurveTo(0.12, -1.20, 0.10, -1.04, 0.035, -0.94);
+            bladeShape.closePath();
+            const blade = new THREE.Mesh(new THREE.ExtrudeGeometry(bladeShape, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 8 }), wood);
+            blade.position.z = -0.009;
             for (const m of [shaft, grip, blade]) {
                 m.castShadow = true;
                 paddle.add(m);
@@ -1947,9 +1989,10 @@ void main() {
             Object.assign(paddler, {
                 upper: upper, paddle: paddle,
                 arms: [-1, 1].map(function (side) {
-                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 6), skin);
+                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), skin);
+                    hand.castShadow = true;
                     canoe.add(hand);
-                    return { side: side, upper: limb(0.05, shirt), fore: limb(0.042, shirt), hand: hand };
+                    return { side: side, upper: limb(0.062, shirt), fore: limb(0.047, skin), hand: hand };
                 })
             });
             scene.add(canoe);

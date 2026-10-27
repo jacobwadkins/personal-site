@@ -33,4 +33,5 @@
     });
 
     document.body.appendChild(link);
+    document.body.classList.add("has-river-return");
 })();
