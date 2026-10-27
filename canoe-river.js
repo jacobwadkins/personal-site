@@ -1991,8 +1991,10 @@ void main() {
                 arms: [-1, 1].map(function (side) {
                     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), skin);
                     hand.castShadow = true;
-                    canoe.add(hand);
-                    return { side: side, upper: limb(0.062, shirt), fore: limb(0.047, skin), hand: hand };
+                    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 8), shirt);
+                    elbow.castShadow = true;
+                    canoe.add(hand, elbow);
+                    return { side: side, upper: limb(0.062, shirt), fore: limb(0.047, skin), hand: hand, elbow: elbow };
                 })
             });
             scene.add(canoe);
@@ -2020,6 +2022,7 @@ void main() {
             orient(arm.upper, shoulder, elbow);
             orient(arm.fore, elbow, hand);
             arm.hand.position.copy(hand);
+            arm.elbow.position.copy(elbow);
         }
 
         // ---------- particles: smoke, spray, and leaves ----------
@@ -2151,7 +2154,7 @@ void main() {
         // ---------- game state ----------
 
         const boat = { x: 0, z: 0, yaw: 0, vx: 0, vz: 0, w: 0, speed: 0 };
-        const stroke = { phase: 0, side: 1, sideS: 1, act: 0, wasIn: false };
+        const stroke = { phase: 0, side: 1, sideS: 1, act: 0, reverse: 0, wasIn: false };
         const keys = { forward: false, back: false, left: false, right: false };
         const cam = { yaw: 0, dragYaw: 0, dragPitch: 0, lastLook: -10 };
         let started = false, active = false, raf = 0, lastTime = 0, time = 0;
@@ -2269,60 +2272,67 @@ void main() {
 
         const _shoulder = new THREE.Vector3(), _grip = new THREE.Vector3(), _bladeT = new THREE.Vector3(), _dir = new THREE.Vector3();
         const _low = new THREE.Vector3(), _pole = new THREE.Vector3(), _bx = new THREE.Vector3(), _bz = new THREE.Vector3(), _blade = new THREE.Vector3();
-        const _rest = new THREE.Vector3(), _restGrip = new THREE.Vector3();
+        const _rest = new THREE.Vector3(), _restGrip = new THREE.Vector3(), _handTarget = new THREE.Vector3();
 
         function posePaddler() {
-            const sg = stroke.sideS, act = stroke.act, ph = stroke.phase, back = thrS < -0.05;
+            const sg = stroke.sideS, act = stroke.act, ph = stroke.phase;
+            // Ease both ends of the pull and recovery, so position and velocity join up
+            // at the catch and exit. Keep the hands within a comfortable seated reach.
             let bz, by, bx, feather, prog;
             if (ph < 0.6) {
                 const p = ph / 0.6;
                 prog = p * p * (3 - 2 * p);
-                bz = -0.85 + 1.3 * prog;
-                by = -0.34;
+                bz = lerp(-0.55, 0.35, prog);
+                by = -0.30;
                 bx = 0.66;
                 feather = 0;
             } else {
                 const r = (ph - 0.6) / 0.4, e = r * r * (3 - 2 * r);
                 prog = 1 - e;
-                bz = 0.45 - 1.3 * e;
-                by = -0.34 + 0.66 * Math.sin(Math.PI * r);
-                bx = 0.7 + 0.1 * Math.sin(Math.PI * r);
-                feather = Math.sin(Math.PI * r);
+                bz = lerp(0.35, -0.55, e);
+                // A raised, feathered recovery, with zero velocity at either end.
+                const lift = Math.pow(Math.sin(Math.PI * r), 2);
+                by = -0.30 + 0.48 * lift;
+                bx = 0.66 + 0.07 * lift;
+                feather = lift;
             }
-            if (back) bz = -0.4 - bz; // back-paddling runs the stroke the other way
-            // blade target and top-hand grip in the canoe's frame, blended toward a resting pose
+            bz = lerp(bz, -0.2 - bz, stroke.reverse);
             _bladeT.set(sg * bx, by, PADDLER_Z + bz);
-            _grip.set(sg * 0.1, 1.0 - 0.14 * prog, PADDLER_Z - 0.3 + bz * 0.35);
-            _rest.set(sg * 0.8, 0.14, PADDLER_Z - 0.2);
-            _restGrip.set(-sg * 0.3, 0.42, PADDLER_Z - 0.32);
+            _grip.set(sg * 0.10, 0.91 - 0.10 * prog, PADDLER_Z - 0.18 + bz * 0.22);
+            _rest.set(sg * 0.72, 0.16, PADDLER_Z - 0.15);
+            _restGrip.set(-sg * 0.20, 0.53, PADDLER_Z - 0.18);
             _bladeT.lerp(_rest, 1 - act);
             _grip.lerp(_restGrip, 1 - act);
             _dir.subVectors(_bladeT, _grip).normalize();
 
-            // body twists toward the paddle side at the catch and unwinds through the stroke
+            // Rotate the shoulders with the torso rather than swinging the whole body
+            // abruptly at the ends of a stroke.
             const up = paddler.upper;
-            up.rotation.y = sg * act * (0.32 - 0.55 * prog);
-            up.rotation.x = -0.12 - 0.18 * act * (1 - prog);
-            up.rotation.z = -sg * 0.05 * act;
+            up.rotation.y = sg * act * (0.22 - 0.38 * prog);
+            up.rotation.x = -0.08 - 0.12 * act * (1 - prog);
+            up.rotation.z = -sg * 0.035 * act;
             up.updateMatrix();
 
-            // paddle: local -y runs from grip to blade; the blade faces aft during the pull
+            // The hands stay on the same shaft while it feathers during recovery.
             const P = paddler.paddle;
             P.position.copy(_grip);
             const yAxis = _a.copy(_dir).negate();
-            _bz.set(0, 0, 1).lerp(_bx.set(sg, 0, 0), feather * 0.9);
+            _bz.set(sg * Math.sin(feather * 1.15), 0, Math.cos(feather * 1.15));
             _bz.addScaledVector(yAxis, -_bz.dot(yAxis)).normalize();
-            _bx.crossVectors(yAxis, _bz);
+            _bx.crossVectors(yAxis, _bz).normalize();
             _m.makeBasis(_bx, yAxis, _bz);
             P.quaternion.setFromRotationMatrix(_m);
-            _low.copy(_grip).addScaledVector(_dir, 0.6);
+            _low.copy(_grip).addScaledVector(_dir, 0.50);
 
-            const topSide = sg >= 0 ? -1 : 1; // the top hand is on the side away from the paddle
+            // When changing sides, exchange grips continuously instead of teleporting
+            // both hands as soon as the paddle crosses the centre of the canoe.
+            const rightTop = smoothstep(-0.85, 0.85, -sg);
             for (const arm of paddler.arms) {
-                _shoulder.set(arm.side * 0.2, 0.5, 0).applyMatrix4(up.matrix);
-                const hand = arm.side === topSide ? _grip : _low;
-                _pole.set(arm.side * 0.6, -0.5, 0.3);
-                solveArm(arm, _shoulder, hand, _pole);
+                _shoulder.set(arm.side * 0.19, 0.50, 0).applyMatrix4(up.matrix);
+                const topWeight = arm.side > 0 ? rightTop : 1 - rightTop;
+                _handTarget.copy(_low).lerp(_grip, topWeight);
+                _pole.set(arm.side * 0.75, -0.7, 0.25).transformDirection(up.matrix);
+                solveArm(arm, _shoulder, _handTarget, _pole);
             }
 
             // ripples and spray where the blade enters and leaves the water
@@ -2428,7 +2438,8 @@ void main() {
             if (steerS > 0.35) stroke.side = 1;
             else if (steerS < -0.35) stroke.side = -1;
             stroke.sideS = damp(stroke.sideS, stroke.side, 4, dt);
-            stroke.act = damp(stroke.act, Math.abs(thrS) > 0.08 ? 1 : 0, 3, dt);
+            stroke.act = damp(stroke.act, Math.abs(thrS) > 0.08 ? 1 : 0, 2.2, dt);
+            stroke.reverse = damp(stroke.reverse, thrS < -0.05 ? 1 : 0, 3, dt);
             if (stroke.act > 0.02) stroke.phase = (stroke.phase + (0.45 + 0.4 * Math.abs(thrS)) * boost * dt) % 1;
             const power = lerp(1, strokePower(), stroke.act);
 
