@@ -1003,29 +1003,38 @@ if (vCanopy > 0.001) {
             }
         });
         const needleTex = foliageTexture(function (g, r) {
-            // a flat spray of hemlock needles, fanning out from its base at the bottom edge
+            // a hemlock bough seen flat: a stem from the bottom edge, side twigs that shorten toward the tip,
+            // and short needles crowding every twig, so it reads as a layered branch and not a fern frond
             g.lineCap = "round";
-            for (let s = 0; s < 5; s++) {
-                const a = -Math.PI / 2 + (s - 2) * 0.3 + (r() - 0.5) * 0.12, len = 236 - Math.abs(s - 2) * 34;
-                for (let t = 0.04; t < 1; t += 0.03) {
-                    const x = 128 + Math.cos(a) * len * t, y = 254 + Math.sin(a) * len * t, nl = 26 * (1 - t * 0.55);
-                    g.lineWidth = 2.4;
+            const twig = function (x0, y0, a, len) {
+                for (let d = 0; d < len; d += 2.6) {
+                    const x = x0 + Math.cos(a) * d, y = y0 + Math.sin(a) * d;
                     for (const side of [-1, 1]) {
-                        const v = Math.round(130 + r() * 110), na = a + side * (1.0 + r() * 0.35);
+                        const v = Math.round(120 + r() * 120), na = a + side * (0.9 + r() * 0.5), nl = 5 + r() * 4;
                         g.strokeStyle = "rgb(" + v + "," + v + "," + v + ")";
+                        g.lineWidth = 1.6 + r();
                         g.beginPath();
                         g.moveTo(x, y);
                         g.lineTo(x + Math.cos(na) * nl, y + Math.sin(na) * nl);
                         g.stroke();
                     }
                 }
-                g.strokeStyle = "rgb(90, 80, 70)";
-                g.lineWidth = 2;
+                g.strokeStyle = "rgb(95, 84, 72)";
+                g.lineWidth = 1.5;
                 g.beginPath();
-                g.moveTo(128, 254);
-                g.lineTo(128 + Math.cos(a) * len, 254 + Math.sin(a) * len);
+                g.moveTo(x0, y0);
+                g.lineTo(x0 + Math.cos(a) * len, y0 + Math.sin(a) * len);
                 g.stroke();
+            };
+            const up = -Math.PI / 2;
+            for (let y = 250; y > 14; y -= 9) {
+                const k = (250 - y) / 236; // 0 at the base, 1 at the tip
+                const reach = 116 * Math.pow(1 - k, 0.75) + 6;
+                for (const side of [-1, 1]) {
+                    twig(128, y + r() * 4, up + side * (1.05 - k * 0.25 + (r() - 0.5) * 0.25), reach * (0.72 + r() * 0.3));
+                }
             }
+            twig(128, 254, up, 242);
         });
 
         // Alpha-tested foliage. Normals aren't flipped on back faces (each crown shades as one soft volume),
@@ -1046,7 +1055,13 @@ diffuseColor.a *= 1.0 + 0.3 * max(0.0, 0.5 * log2(max(dot(crDx, crDx), dot(crDy,
         }
         const leafMat = foliageMaterial(leafTex, "leaf");
         const needleMat = foliageMaterial(needleTex, "needle");
-        const barkMat = atmos(new THREE.MeshLambertMaterial({ vertexColors: true }));
+        // Furrowed bark: streaks of light and dark running up the trunk, from world-space noise (no UVs)
+        const barkMat = atmos(new THREE.MeshLambertMaterial({ vertexColors: true }), "bark", function (shader) {
+            shader.fragmentShader = shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+float crBark = crNoise(vec2((vFogWorld.x + vFogWorld.z) * 11.0, vFogWorld.y * 1.3)) * 0.65
+    + crNoise(vec2((vFogWorld.x - vFogWorld.z) * 27.0, vFogWorld.y * 4.0)) * 0.35;
+diffuseColor.rgb *= 0.45 + 0.9 * crBark;`);
+        });
 
         // Accumulates foliage quads: 4 corners each, normals and shading from callbacks
         function CardSet() { this.pos = []; this.nor = []; this.uv = []; this.col = []; }
@@ -1133,7 +1148,7 @@ diffuseColor.a *= 1.0 + 0.3 * max(0.0, 0.5 * log2(max(dot(crDx, crDx), dot(crDy,
             const corners = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
             const TIERS = 11;
             for (let t = 0; t < TIERS; t++) {
-                const k = t / (TIERS - 1), y = 2.2 + k * 13.5, R = lerp(3.4, 0.8, k), count = Math.round(lerp(7, 4, k));
+                const k = t / (TIERS - 1), y = 2.2 + k * 13.5, R = lerp(3.4, 0.8, k), count = Math.round(lerp(9, 5, k));
                 for (let i = 0; i < count; i++) {
                     const a = (i + r() * 0.6) / count * Math.PI * 2 + t * 0.9;
                     const droop = 0.3 + r() * 0.3, roll = (r() < 0.5 ? -1 : 1) * (0.45 + r() * 0.5);
@@ -1172,7 +1187,7 @@ diffuseColor.a *= 1.0 + 0.3 * max(0.0, 0.5 * log2(max(dot(crDx, crDx), dot(crDy,
         function trunkGeometry(height, r0, r1, limbs) {
             const parts = [];
             const add = function (b0, b1, h, y, rx, rz) {
-                const g = new THREE.CylinderGeometry(b1, b0, h, 6, 1, true);
+                const g = new THREE.CylinderGeometry(b1, b0, h, 8, 1, true);
                 g.translate(0, h / 2, 0);
                 g.rotateX(rx);
                 g.rotateZ(rz);
@@ -1328,8 +1343,9 @@ diffuseColor.a *= 1.0 + 0.3 * max(0.0, 0.5 * log2(max(dot(crDx, crDx), dot(crDy,
         const reflTarget = new THREE.WebGLRenderTarget(1, 1, { type: canFloatTarget ? THREE.HalfFloatType : THREE.UnsignedByteType });
         let useReflection = high;
         const ripples = [];
-        for (let i = 0; i < 6; i++) ripples.push(new THREE.Vector4(0, 0, -100, 0));
+        for (let i = 0; i < 8; i++) ripples.push(new THREE.Vector4(0, 0, -100, 0));
         let rippleNext = 0;
+        // A whirlpool shed by the paddle; the sign of `strength` is the way it turns
         function addRipple(x, z, strength) {
             ripples[rippleNext].set(x, z, U.uTime.value, strength);
             rippleNext = (rippleNext + 1) % ripples.length;
@@ -1374,7 +1390,7 @@ uniform sampler2D uReflTex;
 uniform float uHasRefl;
 uniform vec4 uCanoe;
 uniform float uCanoeSpeed;
-uniform vec4 uRipples[6];
+uniform vec4 uRipples[8];
 uniform vec3 uDeep;
 uniform vec3 uShallow;
 uniform vec3 uBank;
@@ -1411,28 +1427,44 @@ void main() {
     s *= 0.3 + 1.1 * chop;
     vec2 g = s.x * across + s.y * flow;
 
-    // the canoe's V-shaped wake
+    // how far this water is from the hull's waterline
+    float hullW = 0.46 * 0.86 * pow(sin(PI * clamp(hs, 0.0, 1.0)), 0.62);
+    float dHull = length(vec2(max(abs(lat) - hullW, 0.0), max(max(-hs, hs - 1.0), 0.0) * CANOE_LEN));
+
+    // the canoe's wake: a bow wave peeling off each side, foam along the waterline, eddies astern
     float speedK = clamp(uCanoeSpeed * 0.45, 0.0, 1.0);
     float db = CANOE_LEN * 0.5 - along;
     float wake = 0.0;
-    if (db > 0.0 && db < 40.0) {
-        float arm = abs(lat) - (0.3 + db * 0.32);
-        float w = exp(-arm * arm * 6.0) * exp(-db * 0.09) * speedK;
-        wake = w * 0.3;
+    if (db > -0.05 && db < 40.0) {
+        float dbp = max(db, 0.0);
+        float arm = abs(lat) - (0.05 + dbp * 0.3);
+        float w = exp(-arm * arm * mix(30.0, 6.0, smoothstep(0.0, 5.0, dbp))) * exp(-dbp * 0.09) * speedK;
+        wake = w * (0.3 + 0.45 * exp(-dbp * 0.8));
         g += right * sign(lat) * sin(arm * 9.0 - t * 5.0) * w * 0.4;
         float tail = db - CANOE_LEN;
-        if (tail > 0.0) wake += exp(-lat * lat * 3.0) * exp(-tail * 0.35) * speedK * 0.18;
+        if (tail > 0.0) {
+            float sw = tail * 2.4 - t * 1.7, sl = lat - 0.16 * sin(sw);
+            float streak = exp(-sl * sl * 12.0) * exp(-tail * 0.28) * speedK;
+            g += right * cos(sw) * streak * 0.3;
+            wake += streak * (0.14 + 0.16 * crNoise(vec2(lat * 5.0, tail * 1.5 - t)));
+        }
     }
-    // rings from paddle strokes
+    wake += (1.0 - smoothstep(0.0, 0.07, dHull)) * (0.12 + 0.36 * speedK * smoothstep(0.3, 1.0, hs));
+
+    // whirlpools left by the paddle: a dimple with foam winding into it, carried off by the current
     float ringFoam = 0.0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 8; i++) {
         vec4 r = uRipples[i];
         float age = t - r.z;
-        if (age < 0.0 || age > 3.5) continue;
+        if (age < 0.0 || age > 3.2) continue;
         vec2 d = p.xz - r.xy;
-        float dd = length(d), x = dd - age * 1.3;
-        g += d / max(dd, 0.001) * sin(x * 16.0) * exp(-x * x * 5.0) * exp(-age * 1.1) * r.w * 0.5;
-        ringFoam += exp(-x * x * 60.0) * exp(-age * 3.5) * r.w * 0.15;
+        float dd = length(d), rad = 0.15 + age * 0.07;
+        float k = exp(-dd * dd / (rad * rad));
+        float fade = (1.0 - smoothstep(1.6, 3.2, age)) * smoothstep(0.0, 0.12, age) * abs(r.w);
+        vec2 dn = d / max(dd, 0.001);
+        float spiral = sin(atan(d.y, d.x) * sign(r.w) * 2.0 + dd * 22.0 - age * 5.0);
+        g += d * (2.0 / (rad * rad)) * k * fade * 0.025 + dn * spiral * sqrt(k) * fade * 0.14;
+        ringFoam += smoothstep(0.3, 1.0, spiral) * k * fade * 0.3 * exp(-age * 0.9);
     }
 
     vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
@@ -1463,11 +1495,16 @@ void main() {
 
     // white water around rocks, along the shore, and in the wake
     float shore = 1.0 - smoothstep(0.0, 0.15, depth);
-    float amount = rock + shore * 0.25 * crNoise(q * vec2(0.4, 0.15)) + wake + ringFoam;
+    // bubble lines drawn out along the current, so even the calm pools show which way the river runs
+    float lines = smoothstep(0.66, 0.8, crNoise(vec2(q.x * 3.5 + 3.0, q.y * 0.05 - t * 0.08)))
+                * smoothstep(0.4, 0.7, crNoise(vec2(q.x * 0.2 + 9.0, q.y * 0.02 - t * 0.032)))
+                * smoothstep(0.3, 1.0, depth);
+    float amount = rock + shore * 0.25 * crNoise(q * vec2(0.4, 0.15)) + wake + ringFoam + lines * 0.24;
     float lace = crNoise(q * vec2(1.3, 0.55) + vec2(0.0, -t * 1.6)) * 0.55 + crNoise(q * vec2(3.7, 2.2) + vec2(0.0, -t * 3.4)) * 0.45;
     float foam = smoothstep(0.0, 0.3, amount * 1.2 - (1.0 - lace));
 
     vec3 col = mix(body, refl, fres) + spec * (1.0 - foam);
+    col *= mix(0.6, 1.0, smoothstep(0.0, 0.4, dHull)); // the hull shades the water it sits in
     float alpha = mix(0.84 - 0.7 * clarity, 1.0, fres);
     col = mix(col, vec3(0.88, 0.9, 0.88) * (0.45 + 0.75 * sunK), foam * 0.92);
     alpha = max(alpha, foam * 0.95) * smoothstep(0.0, 0.1, depth);
@@ -1856,31 +1893,62 @@ void main() {
         canoe.rotation.order = "YXZ";
         const paddler = {};
 
+        const ARM_A = 0.30, ARM_B = 0.26; // upper arm and forearm
+        const HAND = 0.062;               // from the wrist to the middle of what the hand holds
+        const BLADE_C = 1.07;             // from the grip of the paddle to the middle of its blade
+        const LOW_HAND = 0.5;             // from the grip to the lower hand
+
         function buildCanoe() {
-            // hull lofted from elliptical cross-sections; s runs stern (0) to bow (1)
-            const NS = 40, NT = 16, pos = [], index = [];
-            for (let i = 0; i <= NS; i++) {
-                const s = i / NS, z = (0.5 - s) * CANOE_LEN;
-                const b = Math.max(canoeHalfBeam(s), 0.004), kl = canoeKeel(s), h = canoeSheer(s);
-                for (let j = 0; j <= NT; j++) {
-                    const phi = (j / NT * 2 - 1) * Math.PI / 2;
-                    pos.push(b * Math.sin(phi), kl + (h - kl) * Math.pow(1 - Math.cos(phi), 1.25), z);
-                }
+            // Hull lofted from elliptical cross-sections; s runs stern (0) to bow (1). `inset` shrinks the
+            // section, for the planking and ribs that line the painted skin.
+            function section(s, phi, inset, out) {
+                const b = Math.max(canoeHalfBeam(s) - inset, 0.004), kl = canoeKeel(s) + inset, h = canoeSheer(s);
+                return out.set(b * Math.sin(phi), kl + (h - kl) * Math.pow(1 - Math.cos(phi), 1.25), (0.5 - s) * CANOE_LEN);
             }
-            for (let i = 0; i < NS; i++) {
-                for (let j = 0; j < NT; j++) {
-                    const a = i * (NT + 1) + j, b = a + NT + 1;
-                    index.push(a, b, a + 1, a + 1, b, b + 1);
+            function loft(s0, s1, inset) {
+                const NS = 40, NT = 16, pos = [], index = [], v = new THREE.Vector3();
+                for (let i = 0; i <= NS; i++) {
+                    for (let j = 0; j <= NT; j++) {
+                        section(lerp(s0, s1, i / NS), (j / NT * 2 - 1) * Math.PI / 2, inset, v);
+                        pos.push(v.x, v.y, v.z);
+                    }
                 }
+                for (let i = 0; i < NS; i++) {
+                    for (let j = 0; j < NT; j++) {
+                        const a = i * (NT + 1) + j, b = a + NT + 1;
+                        index.push(a, b, a + 1, a + 1, b, b + 1);
+                    }
+                }
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+                geo.setIndex(index);
+                geo.computeVertexNormals();
+                return geo;
             }
-            const hullGeo = new THREE.BufferGeometry();
-            hullGeo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-            hullGeo.setIndex(index);
-            hullGeo.computeVertexNormals();
-            const hull = new THREE.Mesh(hullGeo, atmos(new THREE.MeshStandardMaterial({ color: color("#a1281f"), roughness: 0.42, side: THREE.DoubleSide })));
-            hull.castShadow = true;
-            hull.receiveShadow = true;
-            canoe.add(hull);
+            const solid = function (hex, roughness, side) {
+                return atmos(new THREE.MeshStandardMaterial({ color: color(hex), roughness: roughness, side: side || THREE.FrontSide }));
+            };
+            const add = function (parent, geo, mat) {
+                const m = new THREE.Mesh(geo, mat);
+                m.castShadow = true;
+                m.receiveShadow = true;
+                parent.add(m);
+                return m;
+            };
+            const put = function (parent, geo, mat, x, y, z, sx, sy, sz) {
+                const m = add(parent, geo, mat);
+                m.position.set(x, y, z);
+                m.scale.set(sx || 1, sy || sx || 1, sz || sx || 1);
+                return m;
+            };
+            const lathe = function (profile, seg) { // [radius, height] pairs from the bottom up
+                return new THREE.LatheGeometry(profile.map(function (p) { return new THREE.Vector2(p[0], p[1]); }), seg || 14);
+            };
+            const ball = new THREE.SphereGeometry(1, 18, 12), cube = new THREE.BoxGeometry(1, 1, 1);
+
+            // painted skin outside, cedar planking inside
+            add(canoe, loft(0, 1, 0), solid("#a1281f", 0.5, THREE.DoubleSide));
+            add(canoe, loft(0.035, 0.965, 0.012), solid("#b08c5e", 0.85, THREE.DoubleSide));
 
             const k = new Kit();
             for (const side of [-1, 1]) {
@@ -1891,138 +1959,181 @@ void main() {
                 }
                 k.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.024, 5, false), "#b08a5c", 0, 0, 0, 0, 0, 0, 0);
             }
-            for (const seat of [[0.2, 0.1], [0.5, 0.17], [0.8, 0.12]]) {
-                const s = seat[0], w = canoeHalfBeam(s) * 2 * 0.95;
-                k.box(w, 0.035, seat[0] === 0.5 ? 0.08 : 0.24, "#a98458", 0, seat[1], (0.5 - s) * CANOE_LEN);
+            // ribs, half bedded in the planking
+            for (let s = 0.075; s < 0.93; s += 0.035) {
+                const pts = [];
+                for (let j = 0; j <= 12; j++) pts.push(section(s, (j / 12 * 2 - 1) * 1.5, 0.02, new THREE.Vector3()));
+                k.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 14, 0.012, 4, false), "#c4a070", 0, 0, 0, 0, 0, 0, 0.05);
             }
-            k.cyl(0.17, 0.5, "#d9a21b", 0, 0.02, -1.1, 0, 0.4, Math.PI / 2, 12); // dry bag in the bow
+            // deck plates closing in the bow and stern
+            const deck = function (s0, s1) {
+                const pos = [], nor = [], N = 8;
+                const at = function (s, side) {
+                    return [side * Math.max(canoeHalfBeam(s) - 0.012, 0), canoeSheer(s) + 0.022, (0.5 - s) * CANOE_LEN];
+                };
+                for (let i = 0; i < N; i++) {
+                    const a = lerp(s0, s1, i / N), b = lerp(s0, s1, (i + 1) / N);
+                    for (const p of [at(a, -1), at(a, 1), at(b, 1), at(a, -1), at(b, 1), at(b, -1)]) {
+                        pos.push(p[0], p[1], p[2]);
+                        nor.push(0, 1, 0);
+                    }
+                }
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+                geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+                return geo;
+            };
+            k.add(deck(0.004, 0.1), "#a47c4c", 0, 0, 0, 0, 0, 0, 0).add(deck(0.9, 0.996), "#a47c4c", 0, 0, 0, 0, 0, 0, 0);
+            // caned seats hung from the gunwales
+            const seat = function (s, y, depth) {
+                const z = (0.5 - s) * CANOE_LEN;
+                for (const dz of [-depth / 2, depth / 2]) {
+                    const hb = canoeHalfBeam(s - dz / CANOE_LEN);
+                    k.box(hb * 1.84, 0.028, 0.036, "#a98458", 0, y, z + dz);
+                    for (const side of [-1, 1]) k.cyl(0.008, canoeSheer(s) - y, "#8a7a5a", side * hb * 0.86, (canoeSheer(s) + y) / 2, z + dz, 0, 0, 0, 6);
+                }
+                for (const side of [-1, 1]) k.box(0.036, 0.028, depth, "#a98458", side * 0.19, y, z);
+                k.box(0.35, 0.01, depth - 0.03, "#d9c9a0", 0, y + 0.004, z);
+            };
+            seat(0.2, 0.1, 0.26);
+            seat(0.78, 0.11, 0.24);
+            // carrying yoke amidships and a thwart ahead of the stern seat
+            for (const t of [[0.5, 0.09, 0.03], [0.36, 0.05, 0.024]]) {
+                k.box(canoeHalfBeam(t[0]) * 1.96, t[2], t[1], "#a98458", 0, canoeSheer(t[0]) - 0.02, (0.5 - t[0]) * CANOE_LEN);
+            }
+            k.cyl(0.17, 0.5, "#d9a21b", 0, 0.04, -1.1, 0, 0.4, Math.PI / 2, 12); // dry bag in the bow
             canoe.add(k.build());
 
             // A few pieces of gear give the boat the feeling of an actual day on the river.
             const gear = new Kit();
-            gear.box(0.025, 0.025, 0.53, "#504838", 0, 0.20, -1.1, 0, 0.4, 0);
-            gear.box(0.32, 0.025, 0.025, "#504838", 0, 0.20, -1.1, 0, 0.4, 0);
-            // A coiled painter at the bow and small brass fasteners along the gunwales.
-            gear.add(new THREE.TorusGeometry(0.105, 0.012, 6, 20), "#d9c59c", 0, 0.17, -1.8, Math.PI / 2, 0, 0, 0);
+            gear.box(0.025, 0.025, 0.53, "#504838", 0, 0.22, -1.1, 0, 0.4, 0);
+            gear.box(0.32, 0.025, 0.025, "#504838", 0, 0.22, -1.1, 0, 0.4, 0);
+            // A coiled painter on the bow deck and small brass fasteners along the gunwales.
+            gear.add(new THREE.TorusGeometry(0.07, 0.012, 6, 20), "#d9c59c", 0, canoeSheer(0.92) + 0.034, (0.5 - 0.92) * CANOE_LEN, Math.PI / 2, 0, 0, 0);
             for (const side of [-1, 1]) for (const s of [0.18, 0.35, 0.5, 0.65, 0.82]) {
                 gear.add(new THREE.SphereGeometry(0.018, 6, 4), "#d4b878", side * canoeHalfBeam(s), canoeSheer(s) + 0.025, (0.5 - s) * CANOE_LEN, 0, 0, 0, 0);
             }
             canoe.add(gear.build());
 
-            // The paddler is built in layers so the life jacket, clothing and head read as a
-            // person even from the usual view behind the canoe. The arms remain separately rigged.
-            const skin = atmos(new THREE.MeshStandardMaterial({ color: color("#c99778"), roughness: 0.9 }));
-            const pfd = atmos(new THREE.MeshStandardMaterial({ color: color("#be6036"), roughness: 0.85 }));
-            const pfdDark = atmos(new THREE.MeshStandardMaterial({ color: color("#803e2d"), roughness: 0.9 }));
-            const shirt = atmos(new THREE.MeshStandardMaterial({ color: color("#b6aa89"), roughness: 1 }));
-            const pants = atmos(new THREE.MeshStandardMaterial({ color: color("#414b4b"), roughness: 1 }));
-            const boots = atmos(new THREE.MeshStandardMaterial({ color: color("#66503d"), roughness: 1 }));
-            const hair = atmos(new THREE.MeshStandardMaterial({ color: color("#574433"), roughness: 1 }));
-            const hat = atmos(new THREE.MeshStandardMaterial({ color: color("#8c7a56"), roughness: 1 }));
-            const wood = atmos(new THREE.MeshStandardMaterial({ color: color("#b98f5c"), roughness: 0.7 }));
-            const limb = function (r, mat) {
-                const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.85, r, 1, 10), mat);
-                m.castShadow = true;
-                canoe.add(m);
-                return m;
-            };
+            // ----- the paddler -----
+            // Turned (lathed) shapes for the torso and limbs, so they taper and swell like a body does. The
+            // legs and hips sit still on the seat; the torso, head and arms are posed every frame.
+            const skin = solid("#c99778", 0.85), shirt = solid("#b6aa89", 1), pants = solid("#414b4b", 1);
+            const boots = solid("#5a4636", 0.9), sole = solid("#2b2620", 1), hair = solid("#4a3a2c", 1), dark = solid("#2a211c", 1);
+            const pfd = solid("#c4552c", 0.8), pfdDark = solid("#7d3a29", 0.9), webbing = solid("#2f3436", 0.9);
+            const hat = solid("#8c7a56", 1, THREE.DoubleSide), wood = solid("#b98f5c", 0.6);
+
+            put(canoe, ball, pants, 0, 0.215, PADDLER_Z + 0.01, 0.165, 0.11, 0.128); // hips
+            for (const side of [-1, 1]) {
+                const hip = new THREE.Vector3(side * 0.095, 0.215, PADDLER_Z - 0.02), knee = new THREE.Vector3(side * 0.205, 0.265, PADDLER_Z - 0.42);
+                const ankle = new THREE.Vector3(side * 0.175, -0.035, PADDLER_Z - 0.66);
+                const tl = hip.distanceTo(knee), sl = knee.distanceTo(ankle);
+                aim(add(canoe, lathe([[0, -0.05], [0.07, -0.03], [0.088, 0.04], [0.086, 0.14], [0.072, tl - 0.06], [0.064, tl]]), pants), hip, knee);
+                put(canoe, ball, pants, knee.x, knee.y, knee.z, 0.066);
+                aim(add(canoe, lathe([[0.062, 0], [0.064, 0.08], [0.052, sl * 0.6], [0.047, sl - 0.07]]), pants), knee, ankle);
+                aim(add(canoe, lathe([[0.05, sl - 0.1], [0.055, sl - 0.03], [0.051, sl + 0.03], [0, sl + 0.045]]), boots), knee, ankle);
+                put(canoe, ball, boots, ankle.x, ankle.y - 0.035, ankle.z - 0.075, 0.05, 0.045, 0.125);
+                put(canoe, cube, sole, ankle.x, ankle.y - 0.074, ankle.z - 0.075, 0.088, 0.018, 0.245);
+            }
+
             const upper = new THREE.Group();
             upper.rotation.order = "YXZ";
-            upper.position.set(0, 0.17, PADDLER_Z);
-            function part(geometry, material, x, y, z, sx, sy, sz) {
-                const m = new THREE.Mesh(geometry, material);
-                m.position.set(x, y, z);
-                m.scale.set(sx || 1, sy || 1, sz || 1);
-                m.castShadow = true;
-                upper.add(m);
-                return m;
-            }
-            // Shirt and softly rounded jacket panels, with seams and straps visible from behind.
-            part(new THREE.SphereGeometry(1, 20, 14), shirt, 0, 0.31, 0, 0.215, 0.30, 0.13);
-            part(new THREE.SphereGeometry(1, 20, 14), pfd, 0, 0.30, 0.015, 0.205, 0.255, 0.145);
-            part(new THREE.BoxGeometry(0.30, 0.025, 0.018), pfdDark, 0, 0.22, 0.155);
-            part(new THREE.BoxGeometry(0.30, 0.025, 0.018), pfdDark, 0, 0.39, 0.15);
-            part(new THREE.BoxGeometry(0.055, 0.04, 0.022), hat, 0, 0.22, 0.167);
-            part(new THREE.BoxGeometry(0.055, 0.04, 0.022), hat, 0, 0.39, 0.162);
-            part(new THREE.CylinderGeometry(0.07, 0.085, 0.11, 12), skin, 0, 0.60, -0.01);
-            part(new THREE.SphereGeometry(1, 20, 16), skin, 0, 0.72, -0.02, 0.115, 0.145, 0.105);
-            // Hair at the back, ears and a subtle nose give the head shape in profile.
-            part(new THREE.SphereGeometry(1, 16, 12), hair, 0, 0.755, 0.025, 0.111, 0.105, 0.075);
-            for (const side of [-1, 1]) {
-                part(new THREE.SphereGeometry(1, 10, 8), skin, side * 0.112, 0.715, -0.02, 0.025, 0.035, 0.022);
-            }
-            part(new THREE.SphereGeometry(1, 10, 8), skin, 0, 0.715, -0.125, 0.027, 0.035, 0.035);
-            part(new THREE.CylinderGeometry(0.19, 0.20, 0.018, 24), hat, 0, 0.82, -0.02);
-            part(new THREE.CylinderGeometry(0.105, 0.125, 0.105, 20), hat, 0, 0.875, -0.02);
-            part(new THREE.CylinderGeometry(0.113, 0.115, 0.018, 20), pfdDark, 0, 0.835, -0.02);
+            upper.position.set(0, 0.25, PADDLER_Z);
             canoe.add(upper);
+            put(upper, lathe([[0, -0.07], [0.13, -0.065], [0.155, -0.03], [0.158, 0.04], [0.152, 0.12], [0.165, 0.22], [0.183, 0.31],
+                [0.186, 0.37], [0.172, 0.42], [0.125, 0.455], [0.07, 0.475], [0.05, 0.49]], 24), shirt, 0, 0, 0, 1, 1, 0.6);
+            // life jacket: a foam vest cut away under the arms, with webbing straps and a zip
+            put(upper, lathe([[0.15, 0.095], [0.176, 0.1], [0.19, 0.13], [0.202, 0.22], [0.213, 0.32], [0.21, 0.38], [0.19, 0.415], [0.15, 0.428]], 24),
+                pfd, 0, 0, 0, 0.86, 1, 0.78);
+            for (const band of [[0.165, 0.2], [0.3, 0.2165]]) {
+                const y = band[0], r = band[1];
+                put(upper, lathe([[r - 0.004, y - 0.012], [r, y - 0.008], [r, y + 0.008], [r - 0.004, y + 0.012]], 24), webbing, 0, 0, 0, 0.86, 1, 0.78);
+                put(upper, cube, dark, 0.05, y, -r * 0.78 - 0.002, 0.04, 0.03, 0.012); // buckle
+            }
+            put(upper, cube, pfdDark, 0, 0.26, -0.156, 0.012, 0.3, 0.016);
+            put(upper, cube, pfdDark, 0, 0.235, 0.158, 0.14, 0.008, 0.012);
+            put(upper, new THREE.TorusGeometry(0.022, 0.006, 5, 10), webbing, 0, 0.42, 0.135);
             for (const side of [-1, 1]) {
-                const hip = new THREE.Vector3(side * 0.1, 0.17, PADDLER_Z), knee = new THREE.Vector3(side * 0.15, 0.36, PADDLER_Z - 0.42);
-                const foot = new THREE.Vector3(side * 0.13, 0.04, PADDLER_Z - 0.8);
-                orient(limb(0.09, pants), hip, knee);
-                orient(limb(0.065, pants), knee, foot);
-                const shoe = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), boots);
-                shoe.position.copy(foot).add(new THREE.Vector3(0, 0.015, -0.06));
-                shoe.scale.set(0.075, 0.055, 0.14);
-                shoe.castShadow = true;
-                canoe.add(shoe);
+                const strap = put(upper, new THREE.TorusGeometry(0.1, 0.014, 6, 14, Math.PI), pfd, side * 0.105, 0.365, 0, 1, 1, 2.4);
+                strap.rotation.y = Math.PI / 2;
             }
-            const paddle = new THREE.Group();
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 1.04, 10), wood);
-            shaft.position.y = -0.52;
-            const grip = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.10, 4, 8), wood);
-            grip.rotation.z = Math.PI / 2;
-            // A tapered, round-ended blade instead of a rectangular plank.
-            const bladeShape = new THREE.Shape();
-            bladeShape.moveTo(-0.035, -0.94);
-            bladeShape.bezierCurveTo(-0.10, -1.04, -0.12, -1.20, -0.095, -1.38);
-            bladeShape.quadraticCurveTo(0, -1.48, 0.095, -1.38);
-            bladeShape.bezierCurveTo(0.12, -1.20, 0.10, -1.04, 0.035, -0.94);
-            bladeShape.closePath();
-            const blade = new THREE.Mesh(new THREE.ExtrudeGeometry(bladeShape, { depth: 0.018, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 8 }), wood);
-            blade.position.z = -0.009;
-            for (const m of [shaft, grip, blade]) {
-                m.castShadow = true;
-                paddle.add(m);
+            put(upper, new THREE.CylinderGeometry(0.047, 0.056, 0.11, 12), skin, 0, 0.525, -0.005);
+            put(upper, new THREE.TorusGeometry(0.06, 0.014, 6, 16), shirt, 0, 0.485, -0.002).rotation.x = Math.PI / 2;
+
+            const head = new THREE.Group();
+            head.rotation.order = "YXZ";
+            head.position.set(0, 0.635, -0.015);
+            upper.add(head);
+            put(head, ball, skin, 0, 0, 0, 0.082, 0.108, 0.098);
+            put(head, ball, skin, 0, -0.058, -0.022, 0.066, 0.062, 0.07);  // jaw
+            put(head, ball, skin, 0, -0.014, -0.098, 0.014, 0.024, 0.02);  // nose
+            put(head, cube, solid("#8a5a4c", 1), 0, -0.062, -0.086, 0.034, 0.006, 0.01);
+            for (const side of [-1, 1]) {
+                put(head, ball, skin, side * 0.082, -0.008, 0.008, 0.012, 0.026, 0.017);
+                put(head, ball, dark, side * 0.031, 0.006, -0.085, 0.009);
+                put(head, cube, hair, side * 0.032, 0.026, -0.089, 0.036, 0.008, 0.012);
             }
-            canoe.add(paddle);
-            Object.assign(paddler, {
-                upper: upper, paddle: paddle,
-                arms: [-1, 1].map(function (side) {
-                    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), skin);
-                    hand.castShadow = true;
-                    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 8), shirt);
-                    elbow.castShadow = true;
-                    canoe.add(hand, elbow);
-                    return { side: side, upper: limb(0.062, shirt), fore: limb(0.047, skin), hand: hand, elbow: elbow };
-                })
+            put(head, ball, hair, 0, 0.03, 0.02, 0.086, 0.085, 0.098);
+            // brimmed hat with a band
+            put(head, lathe([[0.084, 0.064], [0.168, 0.05], [0.172, 0.056], [0.098, 0.074], [0.09, 0.15], [0.07, 0.166], [0, 0.17]], 24),
+                hat, 0, 0, 0.004, 1, 1, 1.1);
+            put(head, lathe([[0.1, 0.076], [0.1, 0.098]], 24), pfdDark, 0, 0, 0.004, 1, 1, 1.1);
+
+            const arms = [-1, 1].map(function (side) {
+                const upperArm = add(canoe, lathe([[0, -0.06], [0.04, -0.052], [0.062, -0.02], [0.066, 0.03], [0.058, 0.14], [0.05, ARM_A]]), shirt);
+                const fore = new THREE.Group();
+                add(fore, lathe([[0.047, 0], [0.05, 0.05], [0.043, 0.15], [0.032, ARM_B - 0.01], [0.03, ARM_B + 0.01]]), skin);
+                add(fore, lathe([[0.05, -0.02], [0.057, -0.005], [0.057, 0.055], [0.05, 0.062]]), shirt); // sleeve rolled to the elbow
+                canoe.add(fore);
+                const elbow = put(canoe, ball, shirt, 0, 0, 0, 0.052);
+                // the hand: fingers wrapped round the shaft (its y axis), palm toward the wrist (+z)
+                const hand = new THREE.Group();
+                put(hand, ball, skin, 0, 0, 0.034, 0.036, 0.048, 0.024);
+                put(hand, new THREE.TorusGeometry(0.029, 0.014, 6, 12), skin, 0, 0, 0, 1, 1, 2.7).rotation.x = Math.PI / 2;
+                canoe.add(hand);
+                return { side: side, upper: upperArm, fore: fore, hand: hand, elbow: elbow, shoulder: new THREE.Vector3(), wrist: new THREE.Vector3() };
             });
+
+            // paddle, hanging down its -y axis from the grip
+            const paddle = new THREE.Group();
+            const shaft = add(paddle, new THREE.CylinderGeometry(0.016, 0.016, 0.86, 10), wood);
+            shaft.position.y = -0.43;
+            add(paddle, new THREE.CapsuleGeometry(0.022, 0.085, 4, 8), wood).rotation.z = Math.PI / 2;
+            const bladeShape = new THREE.Shape();
+            bladeShape.moveTo(-0.03, -0.82);
+            bladeShape.bezierCurveTo(-0.085, -0.90, -0.105, -1.04, -0.092, -1.21);
+            bladeShape.quadraticCurveTo(0, -1.31, 0.092, -1.21);
+            bladeShape.bezierCurveTo(0.105, -1.04, 0.085, -0.90, 0.03, -0.82);
+            bladeShape.closePath();
+            add(paddle, new THREE.ExtrudeGeometry(bladeShape, { depth: 0.014, bevelEnabled: true, bevelThickness: 0.007, bevelSize: 0.007, bevelSegments: 2, curveSegments: 8 }), wood)
+                .position.z = -0.007;
+            canoe.add(paddle);
+
+            Object.assign(paddler, { upper: upper, head: head, paddle: paddle, arms: arms });
             scene.add(canoe);
         }
 
         const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3();
         const _m = new THREE.Matrix4();
-        // Stretch a unit-height cylinder between two points
-        function orient(mesh, from, to) {
-            _a.subVectors(to, from);
-            const len = _a.length();
-            mesh.position.copy(from).add(to).multiplyScalar(0.5);
-            mesh.quaternion.setFromUnitVectors(UP, _a.divideScalar(len || 1));
-            mesh.scale.set(1, len, 1);
+        // Stand a limb (modelled along +y from its joint) at `from`, pointing at `to`
+        function aim(obj, from, to) {
+            obj.position.copy(from);
+            obj.quaternion.setFromUnitVectors(UP, _a.subVectors(to, from).normalize());
+            return obj;
         }
-        // Two-bone arm: elbow found from the bone lengths, bending toward `pole`
-        function solveArm(arm, shoulder, hand, pole) {
-            const A = 0.31, B = 0.31;
-            _b.subVectors(hand, shoulder);
-            const dist = clamp(_b.length(), 0.05, A + B - 0.001);
+        // Two-bone arm: the elbow is found from the bone lengths and bends toward `pole`. A wrist out of
+        // reach is brought in; arm.wrist is where it ended up.
+        function solveArm(arm, shoulder, wrist, pole) {
+            _b.subVectors(wrist, shoulder);
+            const dist = clamp(_b.length(), 0.08, ARM_A + ARM_B - 0.002);
             _b.normalize();
-            const cosA = clamp((A * A + dist * dist - B * B) / (2 * A * dist), -1, 1);
+            const cosA = clamp((ARM_A * ARM_A + dist * dist - ARM_B * ARM_B) / (2 * ARM_A * dist), -1, 1);
             _c.copy(pole).addScaledVector(_b, -pole.dot(_b)).normalize();
-            const elbow = _d.copy(shoulder).addScaledVector(_b, cosA * A).addScaledVector(_c, Math.sqrt(1 - cosA * cosA) * A);
-            orient(arm.upper, shoulder, elbow);
-            orient(arm.fore, elbow, hand);
-            arm.hand.position.copy(hand);
-            arm.elbow.position.copy(elbow);
+            _d.copy(shoulder).addScaledVector(_b, cosA * ARM_A).addScaledVector(_c, Math.sqrt(1 - cosA * cosA) * ARM_A);
+            arm.wrist.copy(shoulder).addScaledVector(_b, dist);
+            arm.elbow.position.copy(_d);
+            aim(arm.upper, shoulder, _d);
+            aim(arm.fore, _d, arm.wrist);
         }
 
         // ---------- particles: smoke, spray, and leaves ----------
@@ -2156,9 +2267,9 @@ void main() {
         const boat = { x: 0, z: 0, yaw: 0, vx: 0, vz: 0, w: 0, speed: 0 };
         const stroke = { phase: 0, side: 1, sideS: 1, act: 0, reverse: 0, wasIn: false };
         const keys = { forward: false, back: false, left: false, right: false };
-        const cam = { yaw: 0, dragYaw: 0, dragPitch: 0, lastLook: -10 };
+        const cam = { yaw: 0, x: 0, z: 0, dragYaw: 0, dragPitch: 0, lastLook: -10 };
         let started = false, active = false, raf = 0, lastTime = 0, time = 0;
-        let manualTimer = 0, thrS = 0, steerS = 0, pullS = 0, bump = 0, holdTime = 0, boost = 1;
+        let manualTimer = 0, thrS = 0, steerS = 0, pullS = 0, bump = 0, holdTime = 0, boost = 1, surge = 0;
         let currentStop = -1, busy = false;
 
         function currentAt(x, z) {
@@ -2177,6 +2288,8 @@ void main() {
             boat.vz = c.z;
             boat.w = 0;
             cam.yaw = boat.yaw;
+            cam.x = boat.x;
+            cam.z = boat.z;
             scatterLeaves();
         }
 
@@ -2265,86 +2378,128 @@ void main() {
             return { thr: 0.3, steer: clamp(wrapAngle(desired - boat.yaw) * 2.4 - boat.w * 0.8, -1, 1) };
         }
 
-        // Paddle stroke: a power phase in the water, then the blade feathers and swings forward
+        // Paddle stroke: the blade is planted, pulled back to the hip and turned out in a J, then feathered
+        // and swung forward. The thrust comes in the pull, and averages 1 over the cycle.
         function strokePower() {
-            return stroke.phase < 0.6 ? 0.35 + 0.65 * Math.sin(Math.PI * stroke.phase / 0.6) / 0.382 : 0.35;
+            const p = (stroke.phase - 0.04) / 0.46;
+            return 0.6 + (p > 0 && p < 1 ? 1.74 * Math.pow(Math.sin(Math.PI * p), 2) : 0);
         }
 
-        const _shoulder = new THREE.Vector3(), _grip = new THREE.Vector3(), _bladeT = new THREE.Vector3(), _dir = new THREE.Vector3();
-        const _low = new THREE.Vector3(), _pole = new THREE.Vector3(), _bx = new THREE.Vector3(), _bz = new THREE.Vector3(), _blade = new THREE.Vector3();
-        const _rest = new THREE.Vector3(), _restGrip = new THREE.Vector3(), _handTarget = new THREE.Vector3();
+        // One forward stroke on the right as key poses round the cycle, mirrored for the left:
+        // phase, blade [out from the keel, height, aft of the seat], top hand likewise,
+        // blade face [turned out for the J, laid flat for the recovery], torso [wind-up, forward lean]
+        const STROKE = [
+            [0.00, 0.66, 0.05, -0.76, 0.10, 0.86, -0.28, 0, 0, 0.34, 0.22],     // reaching for the catch
+            [0.08, 0.66, -0.18, -0.70, 0.13, 0.79, -0.36, 0, 0, 0.31, 0.21],    // planted
+            [0.27, 0.58, -0.20, -0.34, 0.17, 0.80, -0.38, 0, 0, 0.04, 0.12],    // mid-pull, shaft upright
+            [0.45, 0.54, -0.18, 0.02, 0.18, 0.76, -0.42, 0.15, 0, -0.24, 0.05], // at the hip
+            [0.56, 0.62, -0.12, 0.24, 0.16, 0.66, -0.40, 1, 0, -0.28, 0.03],    // the J: blade turned out, prying away
+            [0.66, 0.70, 0.06, 0.20, 0.06, 0.60, -0.45, 0.6, 0.5, -0.22, 0.05], // sliced out of the water
+            [0.82, 0.80, 0.14, -0.30, -0.08, 0.58, -0.50, 0, 1, 0.0, 0.10],     // swinging forward, feathered
+            [0.93, 0.68, 0.16, -0.70, 0.04, 0.80, -0.34, 0, 0.5, 0.27, 0.19]
+        ];
+        const _sk = new Float32Array(10);
+        // A smooth closed curve through the key poses (Catmull-Rom, so speeds join up at every key)
+        function sampleStroke(ph) {
+            const n = STROKE.length;
+            let i = 0;
+            for (let k = 1; k < n; k++) if (STROKE[k][0] <= ph) i = k;
+            const k0 = STROKE[(i + n - 1) % n], k1 = STROKE[i], k2 = STROKE[(i + 1) % n], k3 = STROKE[(i + 2) % n];
+            const t0 = k0[0] - (i === 0 ? 1 : 0), t1 = k1[0], t2 = k2[0] + (i === n - 1 ? 1 : 0), t3 = k3[0] + (i >= n - 2 ? 1 : 0);
+            const h = t2 - t1, u = (ph - t1) / h, u2 = u * u, u3 = u2 * u;
+            for (let c = 1; c <= 10; c++) {
+                const m1 = (k2[c] - k0[c]) / (t2 - t0) * h, m2 = (k3[c] - k1[c]) / (t3 - t1) * h;
+                _sk[c - 1] = (2 * u3 - 3 * u2 + 1) * k1[c] + (u3 - 2 * u2 + u) * m1 + (-2 * u3 + 3 * u2) * k2[c] + (u3 - u2) * m2;
+            }
+            return _sk;
+        }
+
+        const _grip = new THREE.Vector3(), _bladeT = new THREE.Vector3(), _dir = new THREE.Vector3(), _top = new THREE.Vector3();
+        const _low = new THREE.Vector3(), _pole = new THREE.Vector3(), _bx = new THREE.Vector3(), _py = new THREE.Vector3(), _bz = new THREE.Vector3();
+        const _blade = new THREE.Vector3(), _rest = new THREE.Vector3(), _restGrip = new THREE.Vector3(), _handTarget = new THREE.Vector3();
+        const _reach = new THREE.Vector3(), _hAxis = new THREE.Vector3(), _palm = new THREE.Vector3(), _wrist = new THREE.Vector3(), _hx = new THREE.Vector3();
 
         function posePaddler() {
-            const sg = stroke.sideS, act = stroke.act, ph = stroke.phase;
-            // Ease both ends of the pull and recovery, so position and velocity join up
-            // at the catch and exit. Keep the hands within a comfortable seated reach.
-            let bz, by, bx, feather, prog;
-            if (ph < 0.6) {
-                const p = ph / 0.6;
-                prog = p * p * (3 - 2 * p);
-                bz = lerp(-0.55, 0.35, prog);
-                by = -0.30;
-                bx = 0.66;
-                feather = 0;
-            } else {
-                const r = (ph - 0.6) / 0.4, e = r * r * (3 - 2 * r);
-                prog = 1 - e;
-                bz = lerp(0.35, -0.55, e);
-                // A raised, feathered recovery, with zero velocity at either end.
-                const lift = Math.pow(Math.sin(Math.PI * r), 2);
-                by = -0.30 + 0.48 * lift;
-                bx = 0.66 + 0.07 * lift;
-                feather = lift;
-            }
-            bz = lerp(bz, -0.2 - bz, stroke.reverse);
-            _bladeT.set(sg * bx, by, PADDLER_Z + bz);
-            _grip.set(sg * 0.10, 0.91 - 0.10 * prog, PADDLER_Z - 0.18 + bz * 0.22);
-            _rest.set(sg * 0.72, 0.16, PADDLER_Z - 0.15);
-            _restGrip.set(-sg * 0.20, 0.53, PADDLER_Z - 0.18);
+            const sg = stroke.sideS, act = stroke.act, dig = 0.75 + 0.25 * boost; // digging in: a longer reach
+            const k = sampleStroke(stroke.phase);
+            const swap = 1 - Math.min(1, Math.abs(sg)); // changing sides, the paddle is lifted across ahead of him
+            // back-paddling runs the blade the other way along the same path
+            _bladeT.set(sg * k[0], k[1], PADDLER_Z + lerp(k[2], -0.52 - k[2], stroke.reverse));
+            _grip.set(sg * k[3], k[4], PADDLER_Z + k[5]);
+            // at rest the paddle lies across the gunwales
+            _rest.set(sg * 0.75, 0.29, PADDLER_Z - 0.30);
+            _restGrip.set(-sg * 0.35, 0.47, PADDLER_Z - 0.24);
             _bladeT.lerp(_rest, 1 - act);
             _grip.lerp(_restGrip, 1 - act);
+            _bladeT.y += 0.6 * swap;
+            _bladeT.z -= 0.35 * swap;
+            _grip.z -= 0.1 * swap;
+
+            // The stroke is driven from the torso: wound up toward the paddle side at the catch, unwinding
+            // through the pull, and leaning into the reach.
+            const up = paddler.upper, head = paddler.head;
+            up.rotation.y = sg * act * k[8] * dig * (1 - 2 * stroke.reverse);
+            up.rotation.x = -0.05 - act * k[9] * dig;
+            up.rotation.z = -sg * 0.06 * act;
+            up.updateMatrix();
+            // the head stays level and looks downstream; drifting, he looks about
+            head.rotation.y = -up.rotation.y * 0.8 + (1 - act) * 0.4 * Math.sin(time * 0.31) * Math.sin(time * 0.13 + 1);
+            head.rotation.x = -up.rotation.x * 0.7;
+            head.rotation.z = -up.rotation.z * 0.8;
+
+            // keep the top hand within reach of its shoulder, then hang the paddle from it toward the blade
+            const arms = paddler.arms, rightTop = smoothstep(-0.85, 0.85, -sg);
+            for (const arm of arms) arm.shoulder.set(arm.side * 0.185, 0.415, 0).applyMatrix4(up.matrix);
+            _top.copy(arms[0].shoulder).lerp(arms[1].shoulder, rightTop);
+            _reach.subVectors(_grip, _top);
+            const maxReach = ARM_A + ARM_B + HAND - 0.03;
+            if (_reach.length() > maxReach) _grip.copy(_top).addScaledVector(_reach.normalize(), maxReach);
             _dir.subVectors(_bladeT, _grip).normalize();
 
-            // Rotate the shoulders with the torso rather than swinging the whole body
-            // abruptly at the ends of a stroke.
-            const up = paddler.upper;
-            up.rotation.y = sg * act * (0.22 - 0.38 * prog);
-            up.rotation.x = -0.08 - 0.12 * act * (1 - prog);
-            up.rotation.z = -sg * 0.035 * act;
-            up.updateMatrix();
-
-            // The hands stay on the same shaft while it feathers during recovery.
             const P = paddler.paddle;
             P.position.copy(_grip);
-            const yAxis = _a.copy(_dir).negate();
-            _bz.set(sg * Math.sin(feather * 1.15), 0, Math.cos(feather * 1.15));
-            _bz.addScaledVector(yAxis, -_bz.dot(yAxis)).normalize();
-            _bx.crossVectors(yAxis, _bz).normalize();
-            _m.makeBasis(_bx, yAxis, _bz);
+            _py.copy(_dir).negate();
+            const wx = k[6] * act, wy = lerp(1, k[7], act);
+            _bz.set(sg * wx, wy, Math.max(0, 1 - wx - wy));
+            _bz.addScaledVector(_py, -_bz.dot(_py));
+            if (_bz.lengthSq() < 1e-4) _bz.set(0, 0, 1).addScaledVector(_py, -_py.z);
+            _bz.normalize();
+            _bx.crossVectors(_py, _bz).normalize();
+            _m.makeBasis(_bx, _py, _bz);
             P.quaternion.setFromRotationMatrix(_m);
-            _low.copy(_grip).addScaledVector(_dir, 0.50);
+            _low.copy(_grip).addScaledVector(_dir, LOW_HAND);
 
-            // When changing sides, exchange grips continuously instead of teleporting
-            // both hands as soon as the paddle crosses the centre of the canoe.
-            const rightTop = smoothstep(-0.85, 0.85, -sg);
-            for (const arm of paddler.arms) {
-                _shoulder.set(arm.side * 0.19, 0.50, 0).applyMatrix4(up.matrix);
-                const topWeight = arm.side > 0 ? rightTop : 1 - rightTop;
-                _handTarget.copy(_low).lerp(_grip, topWeight);
-                _pole.set(arm.side * 0.75, -0.7, 0.25).transformDirection(up.matrix);
-                solveArm(arm, _shoulder, _handTarget, _pole);
+            // When changing sides, the hands exchange grips continuously instead of teleporting.
+            for (const arm of arms) {
+                const topW = arm.side > 0 ? rightTop : 1 - rightTop;
+                _handTarget.copy(_low).lerp(_grip, topW);
+                // the lower hand wraps the shaft, the top hand the T-grip across it
+                _hAxis.copy(_py).lerp(_bx, topW).normalize();
+                // the palm is on the shoulder side of whatever the hand holds
+                _palm.subVectors(arm.shoulder, _handTarget);
+                _palm.addScaledVector(_hAxis, -_palm.dot(_hAxis)).normalize();
+                _wrist.copy(_handTarget).addScaledVector(_palm, HAND);
+                // lower elbow down and out; top elbow carried high
+                _pole.set(arm.side * lerp(0.6, 0.9, topW), lerp(-0.7, -0.1, topW), lerp(0.35, 0.25, topW)).transformDirection(up.matrix);
+                solveArm(arm, arm.shoulder, _wrist, _pole);
+                arm.hand.position.copy(arm.wrist).addScaledVector(_palm, -HAND);
+                _hx.crossVectors(_hAxis, _palm);
+                _m.makeBasis(_hx, _hAxis, _palm);
+                arm.hand.quaternion.setFromRotationMatrix(_m);
             }
 
-            // ripples and spray where the blade enters and leaves the water
-            _blade.copy(_grip).addScaledVector(_dir, 1.2);
+            // spray where the blade enters and leaves the water; each stroke leaves a pair of small
+            // whirlpools, one off each edge of the blade, turning opposite ways
+            _blade.copy(_grip).addScaledVector(_dir, BLADE_C);
             canoe.localToWorld(_blade);
-            const inWater = _blade.y < 0.02 && act > 0.4;
+            const inWater = _blade.y < 0.04 && act > 0.4;
             if (inWater && !stroke.wasIn) {
-                addRipple(_blade.x, _blade.z, 0.8);
                 for (let i = 0; i < 4; i++) sprayAt(_blade, 0.6);
             } else if (!inWater && stroke.wasIn) {
-                for (let i = 0; i < 7; i++) sprayAt(_blade, 1);
-                addRipple(_blade.x, _blade.z, 0.5);
+                const rx = Math.cos(boat.yaw) * 0.12, rz = -Math.sin(boat.yaw) * 0.12;
+                addRipple(_blade.x + rx, _blade.z + rz, 1);
+                addRipple(_blade.x - rx, _blade.z - rz, -1);
+                for (let i = 0; i < 6; i++) sprayAt(_blade, 0.9);
             }
             stroke.wasIn = inWater;
         }
@@ -2440,22 +2595,42 @@ void main() {
             stroke.sideS = damp(stroke.sideS, stroke.side, 4, dt);
             stroke.act = damp(stroke.act, Math.abs(thrS) > 0.08 ? 1 : 0, 2.2, dt);
             stroke.reverse = damp(stroke.reverse, thrS < -0.05 ? 1 : 0, 3, dt);
-            if (stroke.act > 0.02) stroke.phase = (stroke.phase + (0.45 + 0.4 * Math.abs(thrS)) * boost * dt) % 1;
+            // digging in means a harder pull more than a faster one: the cadence tops out near 60 strokes a minute
+            if (stroke.act > 0.02) stroke.phase = (stroke.phase + (0.42 + 0.33 * Math.abs(thrS)) * (0.7 + 0.3 * boost) * dt) % 1;
             const power = lerp(1, strokePower(), stroke.act);
+
+            // each pull swings the bow away from the paddle, and the J at the end of the stroke brings it back
+            const ph = stroke.phase;
+            const pullK = ph > 0.05 && ph < 0.45 ? Math.pow(Math.sin(Math.PI * (ph - 0.05) / 0.4), 2) : 0;
+            const jK = ph > 0.45 && ph < 0.62 ? Math.pow(Math.sin(Math.PI * (ph - 0.45) / 0.17), 2) : 0;
+            boat.w += stroke.sideS * stroke.act * Math.max(thrS, 0) * (pullK - 2.35 * jK) * 0.8 * dt;
 
             const steps = Math.ceil(dt / (1 / 60));
             for (let i = 0; i < steps; i++) stepBoat(dt / steps, thrS, input.steer, power, pullS);
 
-            // a ride over the riffles, a lean into turns and strokes, and a jolt on a bump
+            // The hull answers the paddle: the bow lifts and the boat squats a little on each pull, and it
+            // heels toward the paddle. On top of that, a ride over the riffles, a lean into turns, and a jolt
+            // on a bump. It trims bow-high, with the paddler alone in the stern.
             bump = Math.max(0, bump - dt * 2.5);
+            surge = damp(surge, (power - 1) * stroke.act * clamp(thrS, -1, 1), 7, dt);
             const rough = riffle(boat.z);
-            canoe.position.set(boat.x, 0.02 * Math.sin(time * 1.7) + rough * 0.03 * Math.sin(time * 6.3) + bump * 0.03 * Math.sin(time * 40), boat.z);
+            canoe.position.set(boat.x, 0.014 * Math.sin(time * 1.7) + 0.008 * Math.sin(time * 2.9 + 1.3) - 0.006 * surge
+                + rough * 0.03 * Math.sin(time * 6.3) + bump * 0.03 * Math.sin(time * 40), boat.z);
             canoe.rotation.y = boat.yaw;
-            canoe.rotation.x = 0.01 * Math.sin(time * 1.3) + rough * 0.02 * Math.sin(time * 4.1);
-            canoe.rotation.z = 0.012 * Math.sin(time * 1.1) - boat.w * 0.06 - stroke.sideS * 0.025 * stroke.act * (power - 0.35) + rough * 0.025 * Math.sin(time * 5.2);
+            canoe.rotation.x = 0.018 + 0.014 * surge + 0.008 * Math.sin(time * 1.3) + 0.004 * Math.sin(time * 2.3 + 0.7) + rough * 0.02 * Math.sin(time * 4.1);
+            canoe.rotation.z = 0.01 * Math.sin(time * 1.1) + 0.005 * Math.sin(time * 1.9 + 2) - boat.w * 0.06
+                - stroke.sideS * 0.03 * stroke.act * (0.3 + 0.5 * (power - 0.6)) + rough * 0.025 * Math.sin(time * 5.2);
             canoe.updateMatrixWorld();
             posePaddler();
             canoe.updateMatrixWorld();
+
+            // the whirlpools drift off with the current
+            for (const r of ripples) {
+                if (time - r.z > 3.5) continue;
+                const c = currentAt(r.x, r.y);
+                r.x += c.x * dt;
+                r.y += c.z * dt;
+            }
 
             waterUniforms.uCanoe.value.set(boat.x, boat.z, Math.sin(boat.yaw), Math.cos(boat.yaw));
             waterUniforms.uCanoeSpeed.value = boat.speed;
@@ -2515,11 +2690,14 @@ void main() {
                 cam.dragPitch = damp(cam.dragPitch, 0, 1.2, dt);
             }
             const sway = started || ui.reduceMotion ? 0 : 0.5 * Math.sin(time * 0.07);
-            const yaw = cam.yaw + cam.dragYaw + sway, pitch = 0.3 + cam.dragPitch, dist = 7.6;
-            const px = boat.x + Math.sin(yaw) * Math.cos(pitch) * dist, pz = boat.z + Math.cos(yaw) * Math.cos(pitch) * dist;
+            // close in behind the paddler, trailing the canoe by a moment, so it is seen to surge with each stroke
+            cam.x = damp(cam.x, boat.x, 6, dt);
+            cam.z = damp(cam.z, boat.z, 6, dt);
+            const yaw = cam.yaw + cam.dragYaw + sway, pitch = 0.24 + cam.dragPitch, dist = 5.6;
+            const px = cam.x + Math.sin(yaw) * Math.cos(pitch) * dist, pz = cam.z + Math.cos(yaw) * Math.cos(pitch) * dist;
             const py = Math.max(0.9 + Math.sin(pitch) * dist, terrainHeight(px, pz) + 1.4, 0.7);
             camera.position.set(px, py, pz);
-            camera.lookAt(boat.x - Math.sin(yaw) * 3, 1.0, boat.z - Math.cos(yaw) * 3);
+            camera.lookAt(cam.x - Math.sin(yaw) * 3, 1.0, cam.z - Math.cos(yaw) * 3);
         }
 
         function updateStops() {
