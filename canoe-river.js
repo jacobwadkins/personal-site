@@ -214,6 +214,7 @@
 
     const stage = root.querySelector(".cr-stage");
     const canvas = stage.querySelector("canvas");
+    const introEl = stage.querySelector(".cr-intro");
     const statusEl = stage.querySelector(".cr-status");
     const startBtn = stage.querySelector(".cr-start");
     const hud = stage.querySelector(".cr-hud");
@@ -359,7 +360,7 @@
             console.error(e);
             return fail("Something went wrong building the river. The landings:");
         }
-        statusEl.hidden = true;
+        introEl.hidden = true; // the Start button now lives in the paddler's speech bubble
         startBtn.hidden = false;
         new ResizeObserver(function () { game.resize(); }).observe(stage);
         if (trip) {
@@ -367,7 +368,7 @@
             stage.classList.remove("is-resuming");
             trip = null;
         } else {
-            game.say(9000); // the paddler introduces himself; not again on the way back from a landing
+            game.say(); // the paddler introduces himself until you start; not again on the way back from a landing
         }
         updateActive();
     }
@@ -436,7 +437,7 @@
             if (!onStage) stage.focus({ preventScroll: true }); // so the key-up lands on the river too
             game.start();
             game.setKey(key, true);
-        } else if (e.code === "KeyE" || (onStage && (e.code === "Enter" || e.code === "Space"))) {
+        } else if (e.code === "KeyE" || ((e.code === "Enter" || e.code === "Space") && (onStage || !game.started))) {
             e.preventDefault();
             if (!game.started) begin();
             else if (e.code !== "Space") game.goAshore();
@@ -2748,7 +2749,8 @@ void main() {
 
         // ---------- rendering, sizing, frame loop ----------
 
-        // The speech bubble rides just above the paddler's hat, kept inside the frame; its tail stays on him
+        // The speech bubble rides just above the paddler's hat, kept inside the frame; its tail stays on him.
+        // It stays up until the trip starts (or for ms milliseconds when given).
         let bubbleTimer = 0;
         function placeBubble() {
             const el = ui.bubble;
@@ -2765,7 +2767,11 @@ void main() {
             ui.bubble.classList.add("is-visible");
             placeBubble();
             clearTimeout(bubbleTimer);
-            bubbleTimer = setTimeout(function () { ui.bubble.classList.remove("is-visible"); }, ms);
+            if (ms) bubbleTimer = setTimeout(hush, ms);
+        }
+        function hush() {
+            clearTimeout(bubbleTimer);
+            ui.bubble.classList.remove("is-visible");
         }
 
         function render() {
@@ -2889,6 +2895,7 @@ void main() {
             start: function () {
                 if (started) return;
                 started = true;
+                hush();
                 ui.stage.classList.add("is-playing");
                 ui.toast(coarse ? "The current carries you. Hold Paddle to go faster, and the arrows to steer."
                     : "The current carries you. W or ↑ to paddle faster, A/D or ←/→ to steer.", 5000);

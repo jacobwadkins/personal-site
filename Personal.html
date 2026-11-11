@@ -27,14 +27,17 @@
 </header>
 
 <main id="main-content">
-    <!-- Canoe river game (scene and controls in canoe-river.js). The paddler introduces himself in a speech
-         bubble for a few seconds once the river has loaded. -->
+    <!-- Canoe river game (scene and controls in canoe-river.js). Once the river has loaded, the paddler
+         introduces himself in a speech bubble that holds the Start button and stays up until you start. -->
     <section id="canoe-river" class="cr-page" aria-label="About me">
         <div class="cr-stage" tabindex="0" aria-label="Canoe game: paddle down a river to each page of the site" aria-describedby="cr-help">
             <canvas aria-hidden="true"></canvas>
             <div class="cr-vignette"></div>
             <div class="cr-labels" aria-hidden="true"></div>
-            <p class="cr-bubble">I enjoy spending time outside and with my family, preferably simultaneously. Enjoy the float or paddle down for more info on my interests and travels.</p>
+            <div class="cr-bubble">
+                <p>I enjoy spending time outside and with my family, preferably simultaneously. Enjoy the float or paddle down for more info on my interests and travels.</p>
+                <button type="button" class="cr-start" hidden>Start paddling</button>
+            </div>
             <nav class="cr-hud" aria-label="River landings"></nav>
             <div class="cr-card"></div>
             <div class="cr-touch">
@@ -54,7 +57,6 @@
             <div class="cr-overlay">
                 <div class="cr-intro">
                     <p class="cr-status"><span class="cr-spinner" aria-hidden="true"></span>Loading the river&hellip;</p>
-                    <button type="button" class="cr-start" hidden>Start paddling</button>
                 </div>
                 <p class="cr-resume-note"><span class="cr-spinner" aria-hidden="true"></span>Back to the river&hellip;</p>
             </div>

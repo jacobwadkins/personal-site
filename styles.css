@@ -765,7 +765,7 @@
     background: #f8fafc;
 }
 
-/* the Start button (and the loading note before it) over the river, gone once you start paddling */
+/* the loading note over the river (the Start button is in the speech bubble), gone once you start paddling */
 .cr-overlay {
     position: absolute;
     inset: 0;
@@ -807,7 +807,8 @@
     }
 }
 
-/* the paddler introduces himself: a speech bubble over his head for a few seconds (placed by canoe-river.js) */
+/* the paddler introduces himself: a speech bubble over his head with the Start button, up until you start
+   (placed by canoe-river.js) */
 .cr-bubble {
     position: absolute;
     left: 0;
@@ -822,13 +823,21 @@
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.6s;
+    transition: opacity 0.6s, visibility 0s 0.6s;
     will-change: transform, opacity;
 }
 
 .cr-bubble.is-visible {
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.6s;
+}
+
+.cr-bubble .cr-start {
+    margin: 0.65rem auto 0.1rem;
 }
 
 .cr-bubble::after {
