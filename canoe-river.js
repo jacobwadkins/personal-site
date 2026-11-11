@@ -1432,18 +1432,20 @@ void main() {
     s *= 0.3 + 1.1 * chop;
     vec2 g = s.x * across + s.y * flow;
 
-    // how far this water is from the hull's waterline
-    float hullW = 0.46 * 0.86 * pow(sin(PI * clamp(hs, 0.0, 1.0)), 0.62);
+    // how far this water is from the hull's waterline (sin(PI) comes out a hair below zero in floats, and
+    // a negative base makes pow() undefined: that drew a line across the river level with the bow)
+    float hullW = 0.46 * 0.86 * pow(max(sin(PI * clamp(hs, 0.0, 1.0)), 0.0), 0.62);
     float dHull = length(vec2(max(abs(lat) - hullW, 0.0), max(max(-hs, hs - 1.0), 0.0) * CANOE_LEN));
 
     // the canoe's wake: a bow wave peeling off each side, foam along the waterline, eddies astern
     float speedK = clamp(uCanoeSpeed * 0.45, 0.0, 1.0);
     float db = CANOE_LEN * 0.5 - along;
     float wake = 0.0;
-    if (db > -0.05 && db < 40.0) {
+    if (db > -0.3 && db < 40.0) {
         float dbp = max(db, 0.0);
+        float lead = smoothstep(-0.3, 0.0, db); // fades in ahead of the bow rather than starting on a hard edge
         float arm = abs(lat) - (0.05 + dbp * 0.3);
-        float w = exp(-arm * arm * mix(30.0, 6.0, smoothstep(0.0, 5.0, dbp))) * exp(-dbp * 0.09) * speedK;
+        float w = exp(-arm * arm * mix(30.0, 6.0, smoothstep(0.0, 5.0, dbp))) * exp(-dbp * 0.09) * speedK * lead;
         wake = w * (0.3 + 0.45 * exp(-dbp * 0.8));
         g += right * sign(lat) * sin(arm * 9.0 - t * 5.0) * w * 0.4;
         float tail = db - CANOE_LEN;
