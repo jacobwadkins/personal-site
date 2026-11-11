@@ -220,6 +220,7 @@
     const labelLayer = stage.querySelector(".cr-labels");
     const card = stage.querySelector(".cr-card");
     const toastEl = stage.querySelector(".cr-toast");
+    const bubbleEl = stage.querySelector(".cr-bubble");
     const fadeEl = stage.querySelector(".cr-fade");
     const fsBtn = stage.querySelector(".cr-fs");
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -326,6 +327,7 @@
             return '<a href="' + s.href + '">' + s.name + "</a>";
         }).join(" &middot; ") + "</span>";
         statusEl.classList.add("is-error");
+        bubbleEl.classList.add("is-visible", "is-static"); // no paddler to say it, so it stays up
         startBtn.hidden = true;
         hud.hidden = true;
     }
@@ -351,7 +353,7 @@
         try {
             game = await createGame(THREE, {
                 canvas: canvas, stage: stage, lowPower: lowPower, reduceMotion: reduceMotion,
-                labels: labels, showStop: showStop, toast: toast, setFade: setFade, saveTrip: saveTrip
+                labels: labels, bubble: bubbleEl, showStop: showStop, toast: toast, setFade: setFade, saveTrip: saveTrip
             });
         } catch (e) {
             console.error(e);
@@ -364,6 +366,8 @@
             resumeTrip(trip);
             stage.classList.remove("is-resuming");
             trip = null;
+        } else {
+            game.say(9000); // the paddler introduces himself; not again on the way back from a landing
         }
         updateActive();
     }
@@ -2744,7 +2748,28 @@ void main() {
 
         // ---------- rendering, sizing, frame loop ----------
 
+        // The speech bubble rides just above the paddler's hat, kept inside the frame; its tail stays on him
+        let bubbleTimer = 0;
+        function placeBubble() {
+            const el = ui.bubble;
+            if (!el.classList.contains("is-visible")) return;
+            _v.set(0, 1.2, PADDLER_Z);
+            canoe.localToWorld(_v).project(camera);
+            const w = ui.stage.clientWidth, h = ui.stage.clientHeight, half = el.offsetWidth / 2;
+            const x0 = (_v.x * 0.5 + 0.5) * w, x = clamp(x0, half + 8, Math.max(half + 8, w - half - 8));
+            const y = Math.max((-_v.y * 0.5 + 0.5) * h - 12, el.offsetHeight + 8);
+            el.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px) translate(-50%,-100%)";
+            el.style.setProperty("--cr-tail", clamp(x0 - x, 24 - half, half - 24).toFixed(1) + "px");
+        }
+        function say(ms) {
+            ui.bubble.classList.add("is-visible");
+            placeBubble();
+            clearTimeout(bubbleTimer);
+            bubbleTimer = setTimeout(function () { ui.bubble.classList.remove("is-visible"); }, ms);
+        }
+
         function render() {
+            placeBubble();
             sky.position.copy(camera.position);
             for (const s of slices) s.mesh.visible = Math.abs(s.z - camera.position.z) < s.range;
             renderer.shadowMap.needsUpdate = true;
@@ -2885,6 +2910,7 @@ void main() {
                 }
             },
             setActive: setActive,
+            say: say,
             resize: resize,
             jumpTo: jumpTo,
             setKey: function (key, down) { keys[key] = down; },
